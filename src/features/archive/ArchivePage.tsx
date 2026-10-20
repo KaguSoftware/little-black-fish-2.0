@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { MouseEvent } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { animate, motion, useMotionValue, useSpring, useTransform } from "motion/react";
-import { PROJECTS, SITE } from "@/shared/content/site";
-import type { Project } from "@/shared/content/site";
+import { SITE } from "@/shared/content/site";
 import { STILL_BY_ID, stillCard } from "@/shared/content/stills";
+import { SERIES_HREF, SERIES_SLUG, cardImage } from "@/shared/data/cards";
+import type { ProjectCard } from "@/shared/data/cards";
 import type { StillId } from "@/shared/content/types";
 import { useUI } from "@/shared/state/store";
 import { FishMark } from "@/shared/ui/FishMark";
@@ -19,7 +21,41 @@ import { irisLinkClick } from "@/shared/ui/Nav";
  * cursor on a spring, wipes in, flickers, lit by a beam from a top-left projector) and
  * the title's cut heals from Redaction 70 to Redaction 10. Idle for 3 s: the projector
  * walks the visible titles by itself. Touch: scrolling opens each row's still in turn, tap goes in.
+ * Rows come from the database (ProjectCard); the series' own row is pinned first when `showFeatured`.
+ * Also used by /category/[slug] with a heading override and no featured row.
  */
+
+export interface ArchiveCategoryLink {
+  slug: string;
+  name: string;
+}
+
+export interface ArchivePageProps {
+  projects: ProjectCard[];
+  /** Visible categories, localized; rendered as a quiet row of links under the intro. */
+  categories?: ArchiveCategoryLink[];
+  /** Slug of the category this page shows (marks its link as current). */
+  currentCategory?: string;
+  /** Overrides the H1 ("Work"). */
+  heading?: string;
+  /** Overrides the intro (both the pointer and the touch variant). */
+  intro?: string;
+  /** Leading link in the category row, e.g. back to all work. */
+  back?: { href: string; label: string };
+  /** Pin the series (its database row, or a stand-in) as the first row. Default true. */
+  showFeatured?: boolean;
+}
+
+/** One row of the list: the pinned series (local still) or a database project (remote cover). */
+interface Row {
+  key: string;
+  title: string;
+  role: string | null;
+  href: string;
+  featured: boolean;
+  still: StillId | null;
+  image: string | null;
+}
 
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 const EASE_IN: [number, number, number, number] = [0.5, 0, 0.75, 0];
@@ -66,8 +102,29 @@ function StillImg({ id, sizes, lazy }: { id: StillId; sizes: string; lazy?: bool
   );
 }
 
+/** A database cover through the Next image optimiser (it negotiates AVIF/WebP itself). */
+function CoverImg({ src, alt, sizes, lazy }: { src: string; alt: string; sizes: string; lazy?: boolean }) {
+  return (
+    <picture>
+      <img
+        {...cardImage(src, sizes)}
+        alt={alt}
+        draggable={false}
+        decoding="async"
+        loading={lazy ? "lazy" : undefined}
+      />
+    </picture>
+  );
+}
+
+function RowImg({ row, sizes, lazy }: { row: Row; sizes: string; lazy?: boolean }) {
+  if (row.still) return <StillImg id={row.still} sizes={sizes} lazy={lazy} />;
+  if (row.image) return <CoverImg src={row.image} alt={row.title} sizes={sizes} lazy={lazy} />;
+  return null;
+}
+
 /** One projected still. Wipes in left to right, wipes out the same way (clip-path only). */
-function ProjectedLayer({ project, on, reduced }: { project: Project; on: boolean; reduced: boolean }) {
+function ProjectedLayer({ row, on, reduced }: { row: Row; on: boolean; reduced: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const first = useRef(true);
 
@@ -93,16 +150,60 @@ function ProjectedLayer({ project, on, reduced }: { project: Project; on: boolea
   return (
     <div
       ref={ref}
-      className="ar-layer"
+      className={row.still || row.image ? "ar-layer" : "ar-layer ar-layer-blank"}
       style={{ clipPath: "inset(0 100% 0 0)", opacity: reduced ? 0 : 1, zIndex: on ? 2 : 1 }}
     >
-      <StillImg id={project.still} sizes="(min-width: 768px) 32vw, 90vw" />
+      <RowImg row={row} sizes="(min-width: 768px) 32vw, 90vw" />
     </div>
   );
 }
 
-export function ArchivePage() {
+export function ArchivePage({
+  projects,
+  categories,
+  currentCategory,
+  heading,
+  intro,
+  back,
+  showFeatured = true,
+}: ArchivePageProps) {
+  const t = useTranslations("archive");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const pathname = usePathname();
+
+  // The series' database row is the pinned row: pulled to the top and drawn with its
+  // still, never listed twice. Without that row the pin still links to the series.
+  const series = projects.find((p) => p.slug === SERIES_SLUG);
+  const rows: Row[] = [
+    ...(showFeatured
+      ? [
+          {
+            key: series?.id ?? "featured:series",
+            title: t("seriesTitle"),
+            role: t("featuredRole"),
+            href: SERIES_HREF,
+            featured: true,
+            still: "s20" as StillId,
+            image: null,
+          },
+        ]
+      : []),
+    ...projects
+      .filter((p) => !(showFeatured && p === series))
+      .map((p) => ({
+        key: p.id,
+        title: p.title,
+        role: p.categoryName,
+        href: p.href,
+        featured: false,
+        still: null,
+        image: p.image,
+      })),
+  ];
+  const year = new Intl.NumberFormat(locale === "fa" ? "fa-IR" : "en-US", { useGrouping: false }).format(
+    Number(SITE.year),
+  );
   const fine = useFinePointer();
   const paused = useUI((s) => s.paused);
   const reduced = useUI((s) => s.reducedMotion);
@@ -312,11 +413,7 @@ export function ArchivePage() {
     if (!idle.current) show(hover.current);
   };
 
-  const onClickRow = (e: MouseEvent<HTMLAnchorElement>, p: Project) => {
-    if (p.href === "#") {
-      e.preventDefault();
-      return;
-    }
+  const onClickRow = (e: MouseEvent<HTMLAnchorElement>, p: Row) => {
     irisLinkClick(e, p.href, pathname, p.featured ? { rim: CHILD_RIM, waitForReady: true } : undefined);
   };
 
@@ -336,8 +433,8 @@ export function ArchivePage() {
             transition={{ duration: reduced ? 0.25 : 0.6, ease: EASE_OUT }}
           />
           <motion.div className="ar-frame" style={{ x: sx, y: sy, width: fw, height: fw / ASPECT }}>
-            {PROJECTS.map((p, i) => (
-              <ProjectedLayer key={p.slug} project={p} on={active === i} reduced={reduced} />
+            {rows.map((p, i) => (
+              <ProjectedLayer key={p.key} row={p} on={active === i} reduced={reduced} />
             ))}
             <div className="ar-vignette" />
             <div className="ar-flicker" />
@@ -347,20 +444,45 @@ export function ArchivePage() {
 
       <main id="main" className="ar">
         <header className="ar-head">
-          <h1 className="ar-h1">Work</h1>
-          <p className="ar-intro">
-            {fine
-              ? "Everything we have made, with the series pinned first. Rest on a title and the projector finds its picture."
-              : "Everything we have made, with the series pinned first. Scroll and each title opens its still; tap one to go in."}
-          </p>
+          <h1 className="ar-h1">{heading ?? t("heading")}</h1>
+          <p className="ar-intro">{intro ?? (fine ? t("introPointer") : t("introTouch"))}</p>
+          {(back || (categories && categories.length > 0)) && (
+            <nav className="ar-cats" aria-label={t("categoriesLabel")}>
+              <ul>
+                {back && (
+                  <li>
+                    <Link href={back.href} onClick={(e) => irisLinkClick(e, back.href, pathname)}>
+                      {back.label}
+                    </Link>
+                  </li>
+                )}
+                {categories?.map((c) => {
+                  const href = `/category/${c.slug}`;
+                  return (
+                    <li key={c.slug}>
+                      <Link
+                        href={href}
+                        aria-current={c.slug === currentCategory ? "page" : undefined}
+                        onClick={(e) => irisLinkClick(e, href, pathname)}
+                      >
+                        {c.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          )}
         </header>
 
+        {rows.length === 0 && <p className="ar-intro ar-empty">{t("empty")}</p>}
+
         <ul className="ar-list" data-hot={hot !== null ? "true" : "false"} onPointerLeave={onLeaveList}>
-          {PROJECTS.map((p, i) => {
+          {rows.map((p, i) => {
             const isActive = hot === i;
             return (
               <motion.li
-                key={p.slug}
+                key={p.key}
                 className="ar-row"
                 data-featured={p.featured ? "true" : "false"}
                 ref={(el) => {
@@ -381,7 +503,6 @@ export function ArchivePage() {
                   onFocus={() => onFocusRow(i)}
                   onBlur={onBlurRow}
                 >
-                  <span className="ar-year">{p.year}</span>
                   <span
                     className="ar-title"
                     data-active={isActive ? "true" : "false"}
@@ -396,7 +517,7 @@ export function ArchivePage() {
                     </span>
                   </span>
                   <span className="ar-role">{p.role}</span>
-                  {p.featured && <span className="ar-sub">Six tellers, one story.</span>}
+                  {p.featured && <span className="ar-sub">{t("featuredSub")}</span>}
                   {p.featured && (
                     <span className="ar-fish" aria-hidden="true">
                       <FishMark size={20} animated rim="oklch(0.7 0.1 210 / 0.85)" style={{ transform: "scaleX(-1)" }} />
@@ -404,7 +525,7 @@ export function ArchivePage() {
                   )}
                 </Link>
 
-                {!fine && (
+                {!fine && (p.still || p.image) && (
                   <div
                     className="ar-inline"
                     data-open={isActive ? "true" : "false"}
@@ -412,7 +533,7 @@ export function ArchivePage() {
                     aria-hidden={!isActive}
                   >
                     <figure className="ar-inline-in">
-                      <StillImg id={p.still} sizes="100vw" lazy />
+                      <RowImg row={p} sizes="100vw" lazy />
                     </figure>
                   </div>
                 )}
@@ -422,10 +543,10 @@ export function ArchivePage() {
         </ul>
 
         <footer className="ar-foot" id="contact">
-          <p className="ar-foot-lead">Have something strange in mind?</p>
-          <a className="ar-mail" href={`mailto:${SITE.email}`}>
-            {SITE.email}
-          </a>
+          <p className="ar-foot-lead">{t("footLead")}</p>
+          <Link className="ar-mail" href="/contact" onClick={(e) => irisLinkClick(e, "/contact", pathname)}>
+            {t("footCta")}
+          </Link>
           <ul className="ar-socials">
             {SITE.socials.map((s) => (
               <li key={s.label}>
@@ -434,7 +555,7 @@ export function ArchivePage() {
             ))}
           </ul>
           <p className="ar-fine">
-            {SITE.year} {SITE.studio}
+            {year} {tc("studio")}
           </p>
         </footer>
       </main>
@@ -449,6 +570,12 @@ padding:clamp(6.5rem,15vh,10rem) var(--gutter) clamp(4.5rem,10vh,7rem)}
 .ar-h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:var(--step-3);line-height:.9;color:var(--ink-dim)}
 .ar-intro{margin:0;max-width:32ch;font-size:var(--step-1);line-height:1.3;color:var(--ink-dim)}
 @media (min-width:48rem){.ar-head{grid-template-columns:1fr minmax(0,26rem);align-items:end}.ar-intro{justify-self:end}}
+.ar-cats{grid-column:1/-1}
+.ar-cats ul{display:flex;flex-wrap:wrap;gap:.25rem 1.5rem;margin:0;padding:0;list-style:none}
+.ar-cats a{display:inline-block;padding:.35rem 0;color:var(--ink-dim);font-weight:500;font-size:var(--step--1);
+text-decoration:underline 1px var(--hairline);text-underline-offset:.35em;transition:color .12s linear,text-decoration-color .12s linear}
+.ar-cats a:hover,.ar-cats a:focus-visible,.ar-cats a[aria-current="page"]{color:var(--ink);text-decoration-color:var(--ink-dim)}
+.ar-empty{max-width:none;padding-block:1.5rem;border-top:1px solid var(--hairline)}
 
 .ar-list{margin:0;padding:0;list-style:none}
 .ar-row{position:relative;margin:0;border-top:1px solid var(--hairline)}
@@ -459,21 +586,23 @@ transition:opacity .45s var(--ease-out-quint)}
 .ar-list[data-hot="true"] .ar-link[data-active="false"]{opacity:.42}
 .ar-year,.ar-role,.ar-sub{font-family:var(--font-sans);font-weight:500;font-size:var(--step--1);line-height:1.2;color:var(--ink-dim)}
 .ar-year{grid-area:year;font-variant-numeric:tabular-nums}
-.ar-role{grid-area:role;text-align:right}
+.ar-role{grid-area:role;text-align:end}
 .ar-sub{grid-area:sub}
 
 .ar-title{grid-area:title;position:relative;display:inline-block;justify-self:start;
-font-size:calc((100vw - 2 * var(--gutter)) / 6.6);line-height:.98;letter-spacing:-.012em;white-space:nowrap;
+font-size:calc((100vw - 2 * var(--gutter)) / 6.6);line-height:.98;letter-spacing:-.012em;
+max-width:calc(100% - .25em);text-wrap:balance;overflow-wrap:break-word;
 font-synthesis:none;transition:transform .6s var(--ease-out-quint)}
 .ar-row[data-featured="true"] .ar-title{font-size:calc((100vw - 2 * var(--gutter)) / 7.6)}
 @media (min-width:40rem) and (max-width:63.99rem){.ar-title{font-size:min(calc((100vw - 2 * var(--gutter)) / 6.6),8rem)}
 .ar-row[data-featured="true"] .ar-title{font-size:min(calc((100vw - 2 * var(--gutter)) / 7.6),8.6rem)}}
 @media (min-width:64rem){
 .ar-link{grid-template-columns:6.5rem minmax(0,1fr) auto;grid-template-areas:"year title role" "fish sub .";gap:0 var(--gutter)}
-.ar-title{margin-left:var(--indent,0);font-size:clamp(3rem,7vw,8rem)}
+.ar-title{margin-inline-start:var(--indent,0);max-width:calc(100% - var(--indent,0px) - .25em);font-size:clamp(3rem,7vw,8rem)}
 .ar-row[data-featured="true"] .ar-title{font-size:clamp(3.2rem,8.2vw,9.2rem)}
 }
 .ar-title[data-active="true"]{transform:translateX(.18em)}
+[dir="rtl"] .ar-title[data-active="true"]{transform:translateX(-.18em)}
 .ar-cut{display:block;text-shadow:0 0 28px oklch(0.08 0.01 215/.85)}
 .ar-cut-rest{font-family:var(--font-display-70);color:var(--ink-dim);transition:opacity .55s var(--ease-out-quint)}
 .ar-cut-heal{position:absolute;inset:0;font-family:var(--font-display-10);color:var(--ink);opacity:0;
@@ -506,12 +635,13 @@ background:radial-gradient(ellipse 130% 130% at 0 0,oklch(0.95 0.02 80/.24) 0%,o
 .ar-layer{position:absolute;inset:0;overflow:hidden}
 .ar-layer picture,.ar-layer img{display:block;width:100%;height:100%}
 .ar-layer img{object-fit:cover}
+.ar-layer-blank{background:var(--stage)}
 .ar-vignette{position:absolute;inset:0;z-index:3;background:radial-gradient(ellipse at center,transparent 52%,oklch(0.08 0.01 215/.6) 100%)}
 .ar-flicker{position:absolute;inset:0;z-index:4;background:oklch(0.97 0.01 80);mix-blend-mode:soft-light;opacity:0;
 animation:ar-flicker 4.7s steps(1,end) infinite}
 @keyframes ar-flicker{0%{opacity:0}6%{opacity:.16}7%{opacity:0}29%{opacity:0}30%{opacity:.1}32%{opacity:0}58%{opacity:.18}59%{opacity:.05}61%{opacity:0}84%{opacity:.12}85%{opacity:0}100%{opacity:0}}
 html[data-motion="paused"] .ar-flicker,html[data-motion="paused"] .ar-fish{animation:none}
-@media (prefers-reduced-motion:reduce){.ar-flicker,.ar-fish{animation:none!important}.ar-title[data-active="true"]{transform:none}}
+@media (prefers-reduced-motion:reduce){.ar-flicker,.ar-fish{animation:none!important}.ar-title[data-active="true"],[dir="rtl"] .ar-title[data-active="true"]{transform:none}}
 
 .ar-foot{display:grid;gap:1.25rem;margin-top:clamp(5rem,14vh,10rem)}
 .ar-foot-lead{margin:0;font-family:var(--font-display);font-size:var(--step-2);line-height:1;color:var(--ink-dim)}
@@ -519,6 +649,7 @@ html[data-motion="paused"] .ar-flicker,html[data-motion="paused"] .ar-fish{anima
 font-family:var(--font-display);font-size:var(--step-4);line-height:.95}
 .ar-mail::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--teller-child);
 transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out-quint)}
+[dir="rtl"] .ar-mail::after{transform-origin:right}
 .ar-mail:hover::after,.ar-mail:focus-visible::after{transform:scaleX(1)}
 .ar-socials{display:flex;flex-wrap:wrap;gap:.5rem 1.75rem;margin:.5rem 0 0;padding:0;list-style:none}
 .ar-socials a{display:inline-block;padding:.35rem 0;color:var(--ink-dim);text-decoration:none;font-weight:500;font-size:var(--step--1);transition:color .12s linear}

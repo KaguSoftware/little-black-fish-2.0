@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { TELLERS, tellerPortrait } from "@/shared/content/characters";
 import { useSeries, useUI } from "@/shared/state/store";
@@ -12,6 +13,8 @@ import { SPRING, tellerAccentCss } from "./lib/enter";
  * High-frequency control: instant hover, scale(.97) press, no looping motion.
  */
 export function TellerSwitcher() {
+  const tr = useTranslations("series");
+  const rtl = useLocale() === "fa";
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
   const rowRef = useRef<HTMLUListElement>(null);
@@ -25,16 +28,27 @@ export function TellerSwitcher() {
     if (!row || !el || row.scrollWidth <= row.clientWidth + 1) return;
     const r = row.getBoundingClientRect();
     const b = el.getBoundingClientRect();
+    const behavior = rm ? "auto" : "smooth";
+    if (rtl) {
+      // RTL: the name opens to the chip's left.
+      const need = b.left - 170;
+      if (b.right > r.right - 8) row.scrollBy({ left: b.right - r.right + 16, behavior });
+      else if (need < r.left) row.scrollBy({ left: need - r.left - 16, behavior });
+      return;
+    }
     const need = b.right + 170;
-    if (b.left < r.left + 8) row.scrollBy({ left: b.left - r.left - 16, behavior: rm ? "auto" : "smooth" });
-    else if (need > r.right) row.scrollBy({ left: need - r.right + 16, behavior: rm ? "auto" : "smooth" });
-  }, [current, rm]);
+    if (b.left < r.left + 8) row.scrollBy({ left: b.left - r.left - 16, behavior });
+    else if (need > r.right) row.scrollBy({ left: need - r.right + 16, behavior });
+  }, [current, rm, rtl]);
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     const n = TELLERS.length;
     let j = -1;
-    if (e.key === "ArrowRight" || e.key === "ArrowDown") j = (i + 1) % n;
-    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") j = (i - 1 + n) % n;
+    // The row flows right to left on fa, so the arrow that points at the next chip flips.
+    const next = rtl ? "ArrowLeft" : "ArrowRight";
+    const prev = rtl ? "ArrowRight" : "ArrowLeft";
+    if (e.key === next || e.key === "ArrowDown") j = (i + 1) % n;
+    else if (e.key === prev || e.key === "ArrowUp") j = (i - 1 + n) % n;
     else if (e.key === "Home") j = 0;
     else if (e.key === "End") j = n - 1;
     if (j < 0) return;
@@ -44,7 +58,7 @@ export function TellerSwitcher() {
 
   return (
     <nav
-      aria-label="Who tells the story"
+      aria-label={tr("switcherLabel")}
       className="pointer-events-none fixed inset-x-0 bottom-0 z-20 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
     >
       <ul
@@ -54,6 +68,7 @@ export function TellerSwitcher() {
         {TELLERS.map((t, i) => {
           const pressed = i === current;
           const accent = tellerAccentCss(t.accent);
+          const role = tr(`roles.${t.id}`);
           return (
             <motion.li key={t.id} layout="position" transition={rm ? { duration: 0 } : SPRING} className="shrink-0">
               <button
@@ -62,13 +77,13 @@ export function TellerSwitcher() {
                 }}
                 type="button"
                 aria-pressed={pressed}
-                aria-label={`Hear it from ${t.name}, ${t.role}`}
+                aria-label={tr("hearFrom", { name: t.name, role })}
                 tabIndex={pressed ? 0 : -1}
                 onClick={() => useSeries.getState().switchTeller(t.id, "switcher")}
                 onKeyDown={(e) => onKeyDown(e, i)}
                 onPointerEnter={() => useSeries.getState().request([t.id])}
                 onFocus={() => useSeries.getState().request([t.id])}
-                className="group flex min-h-11 min-w-11 items-center gap-2.5 rounded-full p-0.5 pr-0.5 outline-offset-4 active:scale-[0.97] data-[pressed=true]:pr-3.5"
+                className="group flex min-h-11 min-w-11 items-center gap-2.5 rounded-full p-0.5 pe-0.5 outline-offset-4 active:scale-[0.97] data-[pressed=true]:pe-3.5"
                 data-pressed={pressed}
               >
                 <span
@@ -111,7 +126,7 @@ export function TellerSwitcher() {
                       {t.name}
                     </span>
                     <span className="block text-[0.78rem] leading-tight" style={{ color: "var(--ink-dim)" }}>
-                      {t.role}
+                      {role}
                     </span>
                   </motion.span>
                 ) : null}

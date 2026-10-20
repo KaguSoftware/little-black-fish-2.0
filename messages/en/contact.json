@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "title": "Start a Project",
+    "description": "Tell Little Black Fish about your project. We read every proposal and write back."
+  },
+  "title": "Start a Project",
+  "intro": "Have a project in mind? Let's talk.",
+  "formLabel": "Project proposal",
+  "fields": {
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "message": "Project Details"
+  },
+  "placeholders": {
+    "phone": "+1 555 000 0000"
+  },
+  "allRequired": "All four fields are needed.",
+  "submit": "Send Proposal",
+  "sending": "Sending…",
+  "errors": {
+    "nameRequired": "Tell us your name.",
+    "emailRequired": "We need an email to write back to.",
+    "emailInvalid": "That email doesn't look quite right.",
+    "phoneRequired": "Leave a number we can reach you on.",
+    "phoneInvalid": "Use digits only, with spaces, brackets or a leading +.",
+    "messageRequired": "Tell us a little about the project.",
+    "generic": "Something went wrong and your message wasn't sent. Please try again in a moment."
+  },
+  "success": {
+    "title": "Message sent.",
+    "body": "Thank you, {name}. We read every proposal ourselves and will write back to {email} soon.",
+    "again": "Send another message"
+  }
+}

@@ -1,22 +1,15 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { TELLERS, TELLER_IDS, tellerPortrait } from "@/shared/content/characters";
-import type { MoodId, TellerId } from "@/shared/content/types";
+import type { TellerId } from "@/shared/content/types";
 import { useSeries, useUI } from "@/shared/state/store";
 import { listVariants, tellerAccentCss } from "./lib/enter";
 import { scrollToTop } from "./lib/lenis";
 
-/** One-line mood descriptors (placeholder voice notes; replace with the studio's). */
-const DESCRIPTOR: Record<MoodId, string> = {
-  bouncy: "Bright, restless, cannot stand still",
-  bored: "Slow, heavy, has seen it all",
-  angry: "Sharp, loud, fists closed",
-  dreamy: "Floating, mirror-bright",
-  ceremonial: "Measured, every word placed",
-  skittish: "Wary, quick to flinch",
-};
+/* One-line mood descriptors live in series.json "moods" (placeholder voice notes; replace with the studio's). */
 
 /**
  * THE OTHERS: the six tellers as a staggered list on the text side. Reaching the chapter
@@ -24,6 +17,7 @@ const DESCRIPTOR: Record<MoodId, string> = {
  * click switches teller and replays the story from the top in that voice.
  */
 export function CastList() {
+  const tr = useTranslations("series");
   const chapter = useSeries((s) => s.chapter);
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
@@ -49,7 +43,7 @@ export function CastList() {
       {visible ? (
         <motion.ul
           key="cast"
-          aria-label="The other tellers"
+          aria-label={tr("castLabel")}
           className="pointer-events-none absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-[var(--gutter)] grid w-[calc(100%-2*var(--gutter))] grid-cols-2 gap-x-4 gap-y-3 md:bottom-[calc(6.25rem+env(safe-area-inset-bottom))] md:w-[min(34rem,46vw)] md:gap-x-6 md:gap-y-3"
           variants={v.parent}
           initial="hidden"
@@ -59,6 +53,7 @@ export function CastList() {
           {TELLERS.map((t, i) => {
             const now = t.id === teller;
             const accent = tellerAccentCss(t.accent);
+            const role = tr(`roles.${t.id}`);
             return (
               <motion.li key={t.id} variants={v.item} className={i % 2 === 1 ? "translate-y-5 md:translate-y-7" : ""}>
                 <button
@@ -76,9 +71,9 @@ export function CastList() {
                   onBlur={() => useSeries.getState().setHoverTeller(null)}
                   aria-current={now ? "true" : undefined}
                   aria-label={
-                    now ? `${t.name}, ${t.role}, telling now` : `Hear it from ${t.name}, ${t.role}`
+                    now ? tr("tellingNowLabel", { name: t.name, role }) : tr("hearFrom", { name: t.name, role })
                   }
-                  className="group pointer-events-auto flex w-full items-center gap-3 rounded-md p-1 text-left active:scale-[0.98] md:gap-4"
+                  className="group pointer-events-auto flex w-full items-center gap-3 rounded-md p-1 text-start active:scale-[0.98] md:gap-4"
                 >
                   <span
                     className="relative block h-[4.25rem] w-[3.25rem] shrink-0 md:h-[5.5rem] md:w-[4.25rem]"
@@ -111,14 +106,14 @@ export function CastList() {
                       {t.name}
                     </span>
                     <span className="block text-[0.8rem] leading-snug" style={{ color: "var(--ink-dim)" }}>
-                      {t.role}
+                      {role}
                     </span>
                     <span className="mt-0.5 hidden text-[0.8rem] leading-snug lg:block" style={{ color: "var(--ink-dim)" }}>
-                      {DESCRIPTOR[t.mood]}
+                      {tr(`moods.${t.mood}`)}
                     </span>
                     {now ? (
                       <span className="mt-1 block text-[0.78rem] font-medium" style={{ color: accent }}>
-                        Telling now
+                        {tr("tellingNow")}
                       </span>
                     ) : null}
                   </span>

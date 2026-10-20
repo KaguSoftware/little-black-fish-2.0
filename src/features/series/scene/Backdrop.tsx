@@ -118,7 +118,7 @@ void main() {
   vec3 duo = mix(uBg * 1.5, uAccent * 1.25, lg);
   vec3 treated = mix(duo, col, uOrig);
 
-  // THE DAY: red-shifted, contrasty, flickering.
+  // THE DAY: red-shifted, contrasty, slowly pulsing.
   treated = mix(treated, treated * vec3(1.45, 0.62, 0.55), uDay);
   treated = max((treated - 0.1) * (1.0 + 0.45 * uDay) + 0.1, 0.0);
   // Bright skies must not blow out: soft-compress highlights, and darken the whole plate on THE DAY.
@@ -304,7 +304,7 @@ export function Backdrop() {
     u.uGrainT.value = Math.floor(t * GRAIN_FPS) % 997;
     u.uBreath.value = 1 + (live ? Math.sin(t * BREATH_HZ * Math.PI * 2) * BREATH_AMP : 0);
     u.uDay.value = f.fx.day;
-    u.uFlicker.value = live ? Math.max(0, noise1(t * 14) * 0.6 + noise1(t * 31 + 9) * 0.4 + 0.25) : 0;
+    u.uFlicker.value = live ? Math.max(0, noise1(t * 0.8) * 0.6 + noise1(t * 0.33 + 9) * 0.4 + 0.25) : 0;
     u.uLow.value = ui.quality === "low" ? 1 : 0;
   });
 

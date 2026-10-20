@@ -95,28 +95,28 @@ export const MOODS: Record<MoodId, MoodParams> = {
     shake: 0, gridChop: 0.1, gridSpeed: 0.4, drift: 0.4, fog: 1.2,
     letters: L({ droop: 1 }), redaction: 35,
   },
-  /** Snake King. Jagged rings, screen shake, jaw snaps, letters jitter. */
+  /** Snake King. Jagged rings, a coiled stillness, jaw snaps, letters fractured. */
   angry: {
-    ringPetals: 7, ringPetalAmp: 0.22, ringSharpness: 1, ringJitter: 0.035, ringSag: 0, ringHop: 0,
-    orbitSpeed: 1.8, twist: 3.2, cursorFlee: 1.4,
-    sway: 0.02, swayHz: 1.4, hop: 0, squash: 0.04, float: 0, spin: 0, twitch: 0.35, slump: -0.06, gait: 1.25,
-    shake: 0.55, gridChop: 1, gridSpeed: 1.6, drift: 1.4, fog: 0.9,
+    ringPetals: 7, ringPetalAmp: 0.2, ringSharpness: 1, ringJitter: 0.012, ringSag: 0, ringHop: 0,
+    orbitSpeed: 0.9, twist: 2.6, cursorFlee: 1.0,
+    sway: 0.02, swayHz: 0.3, hop: 0, squash: 0, float: 0, spin: 0, twitch: 0.08, slump: -0.06, gait: 1.0,
+    shake: 0, gridChop: 0.55, gridSpeed: 0.8, drift: 0.8, fog: 0.9,
     letters: L({ jitter: 1 }), redaction: 70,
   },
   /** Silver One. Slow tides, floating and spinning, letters float in waves, grid ripples outward. */
   dreamy: {
     ringPetals: 3, ringPetalAmp: 0.12, ringSharpness: 0, ringJitter: 0, ringSag: 0, ringHop: 0,
     orbitSpeed: 0.55, twist: 2.4, cursorFlee: 0.8,
-    sway: 0.06, swayHz: 0.12, hop: 0, squash: 0, float: 0.12, spin: 0.08, twitch: 0, slump: -0.04, gait: 0.7,
+    sway: 0.05, swayHz: 0.1, hop: 0, squash: 0, float: 0.1, spin: 0.035, twitch: 0, slump: -0.04, gait: 0.7,
     shake: 0, gridChop: 0, gridSpeed: 0.7, drift: 0.7, fog: 1.4,
     letters: L({ wave: 1 }), redaction: 10,
   },
-  /** Child. Particles hop, the character bounces and squashes, letters hop. */
+  /** Child. Particles lift in a light wave, the character sways openly, letters rise. */
   bouncy: {
-    ringPetals: 5, ringPetalAmp: 0.08, ringSharpness: 0.2, ringJitter: 0.005, ringSag: 0, ringHop: 0.12,
-    orbitSpeed: 1.2, twist: 2.0, cursorFlee: 1.0,
-    sway: 0.04, swayHz: 0.9, hop: 0.07, squash: 0.18, float: 0, spin: 0, twitch: 0.05, slump: -0.02, gait: 1.15,
-    shake: 0, gridChop: 0.35, gridSpeed: 1.1, drift: 1, fog: 1,
+    ringPetals: 5, ringPetalAmp: 0.08, ringSharpness: 0.2, ringJitter: 0.004, ringSag: 0, ringHop: 0.06,
+    orbitSpeed: 0.8, twist: 2.0, cursorFlee: 0.8,
+    sway: 0.035, swayHz: 0.35, hop: 0, squash: 0, float: 0, spin: 0, twitch: 0, slump: -0.02, gait: 1.0,
+    shake: 0, gridChop: 0.25, gridSpeed: 0.8, drift: 0.8, fog: 1,
     letters: L({ hop: 1 }), redaction: 10,
   },
   /** Masked Lady. Rosette 8-petal rings, measured rotation, letters settle with ceremonial stagger. */
@@ -127,12 +127,12 @@ export const MOODS: Record<MoodId, MoodParams> = {
     shake: 0, gridChop: 0.05, gridSpeed: 0.5, drift: 0.5, fog: 1.1,
     letters: L({ settle: 1 }), redaction: 0,
   },
-  /** Creature. Dots flee the cursor hard, head twitches, letters flinch. */
+  /** Creature. Dots shy from the cursor, wary glances, letters lean away. */
   skittish: {
-    ringPetals: 2, ringPetalAmp: 0.06, ringSharpness: 0.1, ringJitter: 0.02, ringSag: 0.04, ringHop: 0.03,
-    orbitSpeed: 0.9, twist: 1.8, cursorFlee: 2.6,
-    sway: 0.03, swayHz: 0.6, hop: 0, squash: 0.05, float: 0, spin: 0, twitch: 0.8, slump: 0.05, gait: 0.95,
-    shake: 0.08, gridChop: 0.5, gridSpeed: 0.9, drift: 0.9, fog: 1,
+    ringPetals: 2, ringPetalAmp: 0.06, ringSharpness: 0.1, ringJitter: 0.008, ringSag: 0.04, ringHop: 0.02,
+    orbitSpeed: 0.7, twist: 1.8, cursorFlee: 1.5,
+    sway: 0.03, swayHz: 0.3, hop: 0, squash: 0, float: 0, spin: 0, twitch: 0.2, slump: 0.05, gait: 0.9,
+    shake: 0, gridChop: 0.35, gridSpeed: 0.7, drift: 0.7, fog: 1,
     letters: L({ flinch: 1 }), redaction: 10,
   },
 };

@@ -64,21 +64,19 @@ const PUSH_STRENGTH = 0.38;
 const PUSH_IN_RATE = 18;
 const PUSH_OUT_RATE = 2.4;
 
-/** Crackle jitter is re-seeded at this rate (Hz) when mood.ringJitter is high ("angry"). */
-const CRACKLE_HZ = 12;
-const CRACKLE_FROM = 0.015;
-const CRACKLE_TO = 0.03;
+/** Jitter drift rate: slow enough to read as dust in a light beam, never as noise. */
+const DRIFT_RATE = 0.35;
 
 /** Sag (gravity) and hop wave. */
-const HOP_RATE = 5.2;
+const HOP_RATE = 2.2;
 
-/** THE DAY shatter. */
-const SHATTER_IN = 11;
+/** THE DAY shatter: a slow-motion burst (debris drifting apart), not a hit. */
+const SHATTER_IN = 1.6;
 const SHATTER_OUT = 2.0;
 const SHATTER_RADIAL = 1.1;
 const SHATTER_SCATTER = 1.4;
 const SHATTER_SPIN = 2.4;
-const SHATTER_JAG = 0.13;
+const SHATTER_JAG = 0.08;
 const SHATTER_FALL = 0.35;
 
 /** WHAT I DID. */
@@ -86,8 +84,8 @@ const SWELL_RADIUS = 0.6;
 const SWELL_BRIGHT = 0.5;
 
 /** Teller-switch flash. */
-const FLASH_DECAY = 3.2;
-const FLASH_BRIGHT = 0.9;
+const FLASH_DECAY = 1.4;
+const FLASH_BRIGHT = 0.35;
 const FLASH_RADIUS = 0.1;
 
 const VERT = /* glsl */ `
@@ -300,8 +298,7 @@ export function ParticleRings() {
     const petalAmp = m.ringPetalAmp;
     const sharp = clamp(m.ringSharpness);
     const jitter = reduced ? 0 : m.ringJitter;
-    const crackle = smoothstep(CRACKLE_FROM, CRACKLE_TO, jitter);
-    const crackSeed = Math.floor(time * CRACKLE_HZ);
+    const drift = time * DRIFT_RATE;
     const sag = m.ringSag;
     const hopAmp = m.ringHop * (reduced ? 0.4 : 1);
     const se = S.shatter;
@@ -356,26 +353,19 @@ export function ParticleRings() {
           y -= sag * (0.3 + 0.7 * sw * sw);
         }
 
-        // Jitter: smooth drift for gentle moods, 12 Hz crackle for angry.
+        // Jitter: a slow per-dot drift, the same for every mood (only the amount differs).
         if (jitter > 0.0003) {
-          const id = i * 13.37;
-          const sx = noise1(time * 0.9 + i * 5.7);
-          const sy = noise1(time * 0.9 + i * 5.7 + 11.1);
-          const sz = noise1(time * 0.9 + i * 5.7 + 22.2);
-          const tx2 = hash1(id + crackSeed * 7.1);
-          const ty2 = hash1(id + crackSeed * 7.1 + 3.3);
-          const tz2 = hash1(id + crackSeed * 7.1 + 6.6);
-          x += jitter * (sx + (tx2 - sx) * crackle);
-          y += jitter * (sy + (ty2 - sy) * crackle);
-          z += jitter * (sz + (tz2 - sz) * crackle);
+          x += jitter * noise1(drift + i * 5.7);
+          y += jitter * noise1(drift + i * 5.7 + 11.1);
+          z += jitter * noise1(drift + i * 5.7 + 22.2);
         }
 
-        // THE DAY: radial shatter with scatter, spin and jagged crackle.
+        // THE DAY: radial shatter with scatter, spin and a frozen jagged offset.
         if (shatterMove > 0.002) {
           const dd = (0.6 + SHATTER_RADIAL * r1) * shatterMove;
           const sc = (0.4 + SHATTER_SCATTER * r2) * shatterMove;
           const jag = SHATTER_JAG * shatterMove;
-          const jid = i * 9.13 + crackSeed * 5.3;
+          const jid = i * 9.13;
           x += x * dd + dir[i * 3] * sc + jag * hash1(jid);
           y += y * dd * 0.6 + dir[i * 3 + 1] * sc + jag * hash1(jid + 2.2) - SHATTER_FALL * shatterMove * shatterMove * r0;
           z += z * dd + dir[i * 3 + 2] * sc + jag * hash1(jid + 4.4);
@@ -437,9 +427,9 @@ export function ParticleRings() {
         // Brightness and size.
         const head = 0.5 + 0.5 * Math.cos(ang - headAng);
         const headB = head * head * head;
-        const tw = reduced ? 0 : Math.sin(time * 1.9 + r0 * TAU * 3);
+        const tw = reduced ? 0 : Math.sin(time * 0.9 + r0 * TAU * 3);
         let b = (HEAD_FLOOR + (1 - HEAD_FLOOR) * headB) * (1 + TWINKLE * tw);
-        if (shatterMove > 0.01) b *= 1 - 0.35 * shatterMove * (0.5 + 0.5 * hash1(i * 3.7 + crackSeed * 2.9));
+        if (shatterMove > 0.01) b *= 1 - 0.35 * shatterMove * (0.5 + 0.5 * hash1(i * 3.7));
         const dxc = wx - camX, dyc = wy - camY, dzc = wz - camZ;
         const nearD = Math.sqrt(dxc * dxc + dyc * dyc + dzc * dzc);
         const near = smoothstep(NEAR_FADE[0], NEAR_FADE[1], nearD);

@@ -13,7 +13,7 @@ export const SITE = {
   city: "Tehran",
   /** Live site: littleblackfishstudios.com (has EN and FA versions). */
   url: "https://www.littleblackfishstudios.com",
-  seriesTitle: "[SERIES TITLE]",
+  seriesTitle: "Shahnameh",
   seriesUrl: "#watch", // PLACEHOLDER: link to the series
   seriesYear: "[YEAR]",
   email: "[EMAIL]", // PLACEHOLDER: live site only has a contact form, no public address
@@ -22,8 +22,8 @@ export const SITE = {
     cta: "Start a project",
   },
   socials: [
-    { label: "Instagram", href: "https://instagram.com" }, // PLACEHOLDER: live site links the bare domain too, no handle yet
-    { label: "YouTube", href: "https://youtube.com" }, // PLACEHOLDER: same, no channel yet
+    { label: "Instagram", href: "https://www.instagram.com/littleblackfishstudio/" },
+    { label: "YouTube", href: "https://www.youtube.com/@Littleblackfishstudio" },
   ],
   /** Ways to support the Shahnameh series (from the live /support page). */
   support: [
@@ -33,7 +33,7 @@ export const SITE = {
   year: "2026",
 } as const;
 
-/** About copy, from the live /about page. */
+/** About copy, from the live /about page. Superseded by messages/<locale>/about.json; kept for existing imports. */
 export const ABOUT = {
   headline: "We Build Worlds.",
   sections: [
@@ -75,7 +75,7 @@ export interface Project {
 }
 
 export const PROJECTS: readonly Project[] = [
-  { slug: "series", title: "[SERIES TITLE]", year: "[YEAR]", role: "Animated series", still: "s20", href: "/projects/series", featured: true },
+  { slug: "series", title: SITE.seriesTitle, year: "[YEAR]", role: "Animated series", still: "s20", href: "/projects/series", featured: true },
   { slug: "p1", title: "[PROJECT 1]", year: "[YEAR]", role: "Short film", still: "s04", href: "#" },
   { slug: "p2", title: "[PROJECT 2]", year: "[YEAR]", role: "Music video", still: "s16", href: "#" },
   { slug: "p3", title: "[PROJECT 3]", year: "[YEAR]", role: "Title sequence", still: "s12", href: "#" },

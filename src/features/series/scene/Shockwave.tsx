@@ -9,22 +9,22 @@ import { easeOutExpo } from "@/shared/lib/math";
 import { useSeries, useUI } from "@/shared/state/store";
 
 /**
- * On teller switch: an accent ring blooms outward from the hero's waist. One flat
+ * On teller switch: an accent ring blooms slowly outward from the hero's waist. One flat
  * ring on the waist plane (occluded by the hero for real), one fainter screen-facing
  * ring so it reads from any camera angle. Colour is read live from frame.accent, so
  * it carries the new teller's blend.
  */
 
 // ── Tuning ──────────────────────────────────────────────────────────────────
-const DURATION = 0.9;
+const DURATION = 2.2;
 const R_START = 0.3;
 const R_END = 6.0;
 /** Ring half-width in metres at start -> end (thins as it travels). */
 const WIDTH_START = 0.32;
 const WIDTH_END = 0.035;
 /** Peak intensities (HDR-ish; ACES compresses). */
-const FLAT_INTENSITY = 2.4;
-const FACING_INTENSITY = 0.9;
+const FLAT_INTENSITY = 1.2;
+const FACING_INTENSITY = 0.45;
 /** The facing ring is this fraction of the flat radius. */
 const FACING_SCALE = 0.8;
 /** Reduced motion: a soft stationary pulse instead. */
@@ -148,8 +148,8 @@ export function Shockwave() {
       const e = easeOutExpo(u);
       r = R_START + (R_END - R_START) * e;
       w = WIDTH_START + (WIDTH_END - WIDTH_START) * Math.pow(e, 0.6);
-      // Snap on, long fall: reads as a punch, not a fade-in.
-      amp = Math.pow(1 - u, 1.7) * Math.min(1, u * 14 + 0.25);
+      // Soft rise, long fall: a slow bloom of light, not a punch.
+      amp = Math.pow(1 - u, 1.7) * Math.min(1, u * 5);
     }
 
     const waist = runtime.hero.waist;

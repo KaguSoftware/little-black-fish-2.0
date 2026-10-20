@@ -1,14 +1,12 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { SITE } from "../content/site";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import { useUI } from "../state/store";
 import { navigateWithIris } from "../transition/navigate";
 import { FishMark } from "./FishMark";
-
-const CHILD_RIM = "oklch(0.7 0.1 210)";
 
 /**
  * Click handler for internal links that should travel through the iris.
@@ -46,6 +44,7 @@ text-shadow:0 0 14px oklch(0.08 0.01 215/.9);transition:color .12s linear}
 .lbf-nav-link:hover,.lbf-nav-link[aria-current="page"]{color:var(--ink)}
 .lbf-nav-link::after{content:"";position:absolute;left:0;right:0;bottom:.2rem;height:1px;background:var(--accent);
 transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease-out-quint)}
+[dir="rtl"] .lbf-nav-link::after{transform-origin:right}
 .lbf-nav-link:hover::after,.lbf-nav-link:focus-visible::after,.lbf-nav-link[aria-current="page"]::after{transform:scaleX(1)}
 .lbf-nav-link:active{transform:scale(.97)}
 @media (max-width:30rem){
@@ -60,19 +59,23 @@ transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease-o
 
 export function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const locale = useLocale() as Locale;
+  const t = useTranslations("nav");
+  const tc = useTranslations("common");
   const navHidden = useUI((s) => s.navHidden);
   // Only the series page hides the nav (until THE OTHERS); the flag must not leak to other routes.
+  // usePathname (next-intl) is unprefixed, so "/fa/projects/series" reads as "/projects/series".
   const hidden = navHidden && pathname?.startsWith("/projects/series") === true;
 
   const links: { label: string; href: string; current: boolean; iris?: { rim?: string; waitForReady?: boolean } }[] = [
-    { label: "Work", href: "/projects", current: pathname === "/projects" },
-    {
-      label: SITE.seriesTitle,
-      href: "/projects/series",
-      current: pathname === "/projects/series",
-      iris: { rim: CHILD_RIM, waitForReady: true },
-    },
+    { label: t("work"), href: "/projects", current: pathname === "/projects" },
+    { label: t("about"), href: "/about", current: pathname === "/about" },
+    { label: t("support"), href: "/support", current: pathname === "/support" },
+    { label: t("contact"), href: "/contact", current: pathname === "/contact" },
   ];
+
+  const otherLocale: Locale = locale === "fa" ? "en" : "fa";
 
   // Dev tools (e.g. /dev/puppets) have their own chrome.
   if (pathname?.startsWith("/dev")) return null;
@@ -84,15 +87,15 @@ export function Nav() {
         href="/"
         className="lbf-nav-brand"
         aria-current={pathname === "/" ? "page" : undefined}
-        aria-label={SITE.studio}
+        aria-label={tc("studio")}
         onClick={(e) => irisLinkClick(e, "/", pathname)}
       >
         <FishMark size={16} animated />
         <span className="lbf-nav-word" aria-hidden="true">
-          {SITE.studio}
+          {tc("studio")}
         </span>
       </Link>
-      <nav aria-label="Primary">
+      <nav aria-label={t("primary")}>
         <ul className="lbf-nav-list">
           {links.map((l) => (
             <li key={l.href}>
@@ -107,9 +110,25 @@ export function Nav() {
             </li>
           ))}
           <li>
-            <a className="lbf-nav-link" href={`mailto:${SITE.email}`}>
-              Contact
-            </a>
+            <Link
+              href={pathname || "/"}
+              locale={otherLocale}
+              hrefLang={otherLocale}
+              className="lbf-nav-link"
+              onClick={(e) => {
+                // Keep the query string (e.g. archive filters) when switching language.
+                const search = window.location.search;
+                if (!search || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                router.push(`${pathname || "/"}${search}`, { locale: otherLocale });
+              }}
+            >
+              {/* Name the language in itself, so a screen reader voices it in that language. */}
+              <span lang={t("switchLang")}>
+                <span aria-hidden="true">{t("switchLabel")}</span>
+                <span className="sr-only">{t("switchName")}</span>
+              </span>
+            </Link>
           </li>
         </ul>
       </nav>

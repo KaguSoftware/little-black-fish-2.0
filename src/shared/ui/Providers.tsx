@@ -32,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       p.y = -((e.clientY / window.innerHeight) * 2 - 1);
       p.active = true;
       p.lastMove = performance.now();
+      p.fine = e.pointerType !== "touch";
     };
     const onLeave = () => {
       pointer.active = false;

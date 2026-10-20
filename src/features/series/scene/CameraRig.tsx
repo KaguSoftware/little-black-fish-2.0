@@ -3,38 +3,34 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo } from "react";
 import { Color, FogExp2, PerspectiveCamera, Vector3 } from "three";
-import { clamp, damp, noise1 } from "@/shared/lib/math";
+import { clamp, damp, lerp, smootherstep } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
 import { useUI } from "@/shared/state/store";
 import { Damper } from "./stage/smoothDamp";
 
 // ── Tuning ─────────────────────────────────────────────────────────────────
+// The camera is a crane / dolly, never handheld: heavy smoothing, no shake, no roll noise.
 /** Extra smoothing time (s) on top of the director's own smoothing. */
-const SMOOTH_POS = 0.09;
-const SMOOTH_TARGET = 0.07;
-const SMOOTH_FOV = 0.08;
-const SMOOTH_ROLL = 0.1;
+const SMOOTH_POS = 0.38;
+const SMOOTH_TARGET = 0.3;
+const SMOOTH_FOV = 0.45;
+const SMOOTH_ROLL = 0.6;
+/** Close-up and eye dive need the camera glued to the eyes: lighter smoothing there. */
+const SMOOTH_CLOSE = 0.1;
 /** Director output jumping further than this (m) in one frame is a cut (dive): snap, don't glide. */
 const CUT_DISTANCE = 1.5;
 
-/** Shake at mood.shake = 1 and day = 1. Metres / radians. */
-const SHAKE_POS = 0.085;
-const SHAKE_ROLL = 0.028;
-/** Octave frequencies (Hz-ish) for the two noise layers and their weights. */
-const SHAKE_F1 = 6.5;
-const SHAKE_F2 = 17;
-const SHAKE_W1 = 0.65;
-const SHAKE_W2 = 0.35;
+/** THE DAY: tension through a slow push-in along the view axis (m), not shake. */
+const DAY_PUSH = 0.42;
 
-/** Handheld breathing (very small). */
-const BREATH_POS = 0.006;
-const BREATH_ROLL = 0.0014;
-const BREATH_HZ = 0.32;
+/** Slow crane drift, a long period so it reads as a living frame, never as a wobble. */
+const DRIFT_POS = 0.014;
+const DRIFT_HZ = 0.06;
 
 /** Pointer parallax, max camera offset in metres. */
-const PARALLAX_X = 0.06;
-const PARALLAX_Y = 0.036;
-const PARALLAX_RATE = 3.2;
+const PARALLAX_X = 0.035;
+const PARALLAX_Y = 0.02;
+const PARALLAX_RATE = 1.1;
 
 /** Fade rate when motion gets switched on/off (reduced motion / pause). */
 const MOTION_GAIN_RATE = 4;
@@ -101,7 +97,7 @@ function createState(): RigState {
 
 /**
  * Applies runtime.frame.camera to the default camera (after the director, priority -50),
- * adds shake / breathing / pointer parallax, and owns scene background + fog.
+ * adds a slow drift / THE DAY push-in / pointer parallax, and owns scene background + fog.
  */
 export function CameraRig() {
   const scene = useThree((s) => s.scene);
@@ -132,7 +128,7 @@ export function CameraRig() {
     fog.color.setRGB(f.bg[0], f.bg[1], f.bg[2]);
     fog.density = FOG_BASE * f.mood.fog;
 
-    // ── Motion gating (reduced motion / paused fade shake out, never pop) ─
+    // ── Motion gating (reduced motion / paused fade drift out, never pop) ─
     const calm = ui.reducedMotion || ui.paused;
     st.motionGain = damp(st.motionGain, calm ? 0 : 1, MOTION_GAIN_RATE, dt);
     if (st.motionGain < 0.001) st.motionGain = 0;
@@ -150,55 +146,51 @@ export function CameraRig() {
       st.dFov.reset(); st.dRoll.reset();
       st.init = true;
     } else {
-      st.pos.x = st.dPx.step(st.pos.x, raw.pos.x, SMOOTH_POS, dt);
-      st.pos.y = st.dPy.step(st.pos.y, raw.pos.y, SMOOTH_POS, dt);
-      st.pos.z = st.dPz.step(st.pos.z, raw.pos.z, SMOOTH_POS, dt);
-      st.tgt.x = st.dTx.step(st.tgt.x, raw.target.x, SMOOTH_TARGET, dt);
-      st.tgt.y = st.dTy.step(st.tgt.y, raw.target.y, SMOOTH_TARGET, dt);
-      st.tgt.z = st.dTz.step(st.tgt.z, raw.target.z, SMOOTH_TARGET, dt);
-      st.fov = st.dFov.step(st.fov, raw.fov, SMOOTH_FOV, dt);
+      const close = Math.max(f.fx.closeUp, f.fx.diveApproach);
+      const sp = lerp(SMOOTH_POS, SMOOTH_CLOSE, close);
+      const stg = lerp(SMOOTH_TARGET, SMOOTH_CLOSE, close);
+      const sf = lerp(SMOOTH_FOV, SMOOTH_CLOSE, close);
+      st.pos.x = st.dPx.step(st.pos.x, raw.pos.x, sp, dt);
+      st.pos.y = st.dPy.step(st.pos.y, raw.pos.y, sp, dt);
+      st.pos.z = st.dPz.step(st.pos.z, raw.pos.z, sp, dt);
+      st.tgt.x = st.dTx.step(st.tgt.x, raw.target.x, stg, dt);
+      st.tgt.y = st.dTy.step(st.tgt.y, raw.target.y, stg, dt);
+      st.tgt.z = st.dTz.step(st.tgt.z, raw.target.z, stg, dt);
+      st.fov = st.dFov.step(st.fov, raw.fov, sf, dt);
       st.roll = st.dRoll.step(st.roll, raw.roll, SMOOTH_ROLL, dt);
     }
     st.lastRaw.copy(raw.pos);
 
-    // ── Shake (noise, two octaves) + breathing ──────────────────────────
+    // ── Slow drift + THE DAY push-in ────────────────────────────────────
     const gain = st.motionGain;
     const fx = f.fx;
-    const shakeAmt = f.mood.shake * (0.25 + 0.75 * fx.day) * (1 - fx.diveApproach) * gain;
-    let shX = 0, shY = 0, shZ = 0, shR = 0;
-    if (shakeAmt > 0.0005) {
-      const t = st.t;
-      shX = (noise1(t * SHAKE_F1) * SHAKE_W1 + noise1(t * SHAKE_F2 + 40.3) * SHAKE_W2) * SHAKE_POS * shakeAmt;
-      shY = (noise1(t * SHAKE_F1 + 11.7) * SHAKE_W1 + noise1(t * SHAKE_F2 + 71.9) * SHAKE_W2) * SHAKE_POS * shakeAmt;
-      shZ = (noise1(t * SHAKE_F1 + 23.1) * SHAKE_W1 + noise1(t * SHAKE_F2 + 93.4) * SHAKE_W2) * SHAKE_POS * 0.5 * shakeAmt;
-      shR = (noise1(t * SHAKE_F1 + 37.9) * SHAKE_W1 + noise1(t * SHAKE_F2 + 5.2) * SHAKE_W2) * SHAKE_ROLL * shakeAmt;
-    }
-    const bt = st.t * BREATH_HZ * Math.PI * 2;
-    const breathY = Math.sin(bt) * BREATH_POS * gain;
-    const breathX = Math.sin(bt * 0.63 + 1.3) * BREATH_POS * 0.6 * gain;
-    const breathR = Math.sin(bt * 0.8 + 2.1) * BREATH_ROLL * gain;
+    const still = clamp(1 - fx.closeUp) * clamp(1 - fx.diveApproach);
+    const dt2 = st.t * DRIFT_HZ * Math.PI * 2;
+    const driftX = Math.sin(dt2) * DRIFT_POS * gain * still;
+    const driftY = Math.sin(dt2 * 0.71 + 1.3) * DRIFT_POS * 0.6 * gain * still;
+    const push = smootherstep(fx.day) * DAY_PUSH * gain;
 
     // ── Pointer parallax (not in the close-up / dive) ───────────────────
     const ptr = runtime.pointer;
     const ptrOn = ptr.active && gain > 0 ? 1 : 0;
     st.px = damp(st.px, ptr.x * ptrOn, PARALLAX_RATE, dt);
     st.py = damp(st.py, ptr.y * ptrOn, PARALLAX_RATE, dt);
-    const parGain = clamp(1 - fx.closeUp) * clamp(1 - fx.diveApproach) * gain;
+    const parGain = still * gain;
 
     // ── Apply ───────────────────────────────────────────────────────────
     cam.position.copy(st.pos);
     cam.lookAt(st.tgt);
     st.right.set(1, 0, 0).applyQuaternion(cam.quaternion);
     st.up.set(0, 1, 0).applyQuaternion(cam.quaternion);
-    const offX = st.px * PARALLAX_X * parGain + shX + breathX;
-    const offY = st.py * PARALLAX_Y * parGain + shY + breathY;
+    const offX = st.px * PARALLAX_X * parGain + driftX;
+    const offY = st.py * PARALLAX_Y * parGain + driftY;
     cam.position.addScaledVector(st.right, offX).addScaledVector(st.up, offY);
-    if (shZ !== 0) {
-      // push along the view axis (negative z of the camera)
-      st.right.set(0, 0, 1).applyQuaternion(cam.quaternion);
-      cam.position.addScaledVector(st.right, shZ);
+    if (push > 0) {
+      // dolly in along the view axis (negative z of the camera)
+      st.right.set(0, 0, -1).applyQuaternion(cam.quaternion);
+      cam.position.addScaledVector(st.right, push);
     }
-    cam.rotateZ(st.roll + shR + breathR);
+    cam.rotateZ(st.roll);
 
     // Portrait compensation, then projection only when fov actually changed.
     const aspect = state.size.width / Math.max(1, state.size.height);

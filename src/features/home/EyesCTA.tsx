@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { getPathname, useRouter } from "@/i18n/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TELLER_BY_ID } from "@/shared/content/characters";
-import { SITE } from "@/shared/content/site";
 import { oklchCss } from "@/shared/lib/color";
 import { useTellerPuppet } from "@/shared/puppets/rig/useTellerPuppet";
 import { useIris, useUI } from "@/shared/state/store";
@@ -27,6 +27,8 @@ const CHILD_RIM = oklchCss(TELLER_BY_ID.child.accent);
 export function EyesCTA() {
   const ref = useRef<HTMLElement>(null);
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("home.eyes");
   const quality = useUI((st) => st.quality);
   const [near, setNear] = useState(false);
   const [inView, setInView] = useState(false);
@@ -113,12 +115,12 @@ export function EyesCTA() {
         <div className={s.eyesVignette} />
       </div>
 
-      <h2 id="eyes-title" className={s.eyesTitle} aria-label={SITE.seriesTitle}>
+      <h2 id="eyes-title" className={s.eyesTitle} aria-label={t("title")}>
         <span className={s.titleEroded} aria-hidden>
-          {SITE.seriesTitle}
+          {t("title")}
         </span>
         <span className={s.titleClean} aria-hidden>
-          {SITE.seriesTitle}
+          {t("title")}
         </span>
       </h2>
 
@@ -132,7 +134,7 @@ export function EyesCTA() {
       />
 
       <a
-        href={SERIES_HREF}
+        href={getPathname({ href: SERIES_HREF, locale })}
         className={s.look}
         onPointerEnter={() => setEngaged(true)}
         onPointerLeave={() => setEngaged(false)}
@@ -144,7 +146,7 @@ export function EyesCTA() {
           go(e.detail === 0 ? undefined : e);
         }}
       >
-        <span className={s.lookText}>Look closer</span>
+        <span className={s.lookText}>{t("look")}</span>
         <span className={s.lookLine} aria-hidden />
       </a>
     </section>

@@ -39,7 +39,7 @@ export function HairlineLink({
       />
       <span
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
+        className="absolute inset-x-0 bottom-0 h-[2px] origin-left scale-x-0 rtl:origin-right transition-transform duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-x-100 group-focus-visible:scale-x-100 motion-reduce:transition-none"
         style={{ background: "var(--accent)" }}
       />
     </a>

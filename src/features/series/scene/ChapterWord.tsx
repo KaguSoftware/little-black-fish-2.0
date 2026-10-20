@@ -2,15 +2,16 @@
 
 import { Text } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
+import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Color, MeshBasicMaterial, type Group, type Mesh } from "three";
-import { CHAPTER_BY_ID } from "@/shared/content/chapters";
 import { TELLER_BY_ID } from "@/shared/content/characters";
 import { MOODS } from "@/shared/content/moods";
 import { oklchToLinear } from "@/shared/lib/color";
 import { damp, lerp, smoothstep } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
 import { useSeries, useUI } from "@/shared/state/store";
+import { hasArabicScript } from "../ui/lib/i18n";
 
 // ── Tuning ─────────────────────────────────────────────────────────────────
 /** Where the word stands: upstage of the hero, a little above the floor. */
@@ -48,6 +49,8 @@ const FONT_FOR_CUT: Record<Cut, string> = {
   70: "/fonts/redaction-70.woff",
   100: "/fonts/redaction-100.woff",
 };
+/** Persian chapter words: Redaction has no Arabic-script glyphs and troika needs a .woff/.ttf (OFL, @fontsource/vazirmatn). */
+const PERSIAN_FONT = "/fonts/vazirmatn-arabic-500.woff";
 /** How far THE DAY pushes toward the most degraded cut when the font is picked. */
 const DAY_PUSH = 0.7;
 
@@ -67,14 +70,15 @@ function nearestCut(r: number): Cut {
 }
 
 export function ChapterWord() {
+  const t = useTranslations("series");
   const chapter = useSeries((s) => s.chapter);
   const teller = useSeries((s) => s.teller);
   if (chapter === "look" || chapter === "maker") return null;
   // The font is decided here, once per chapter / teller change, never per frame.
   const base = MOODS[TELLER_BY_ID[teller].mood].redaction;
   const cut = nearestCut(chapter === "day" ? lerp(base, 100, DAY_PUSH) : base);
-  const font = FONT_FOR_CUT[cut];
-  const word = CHAPTER_BY_ID[chapter].word;
+  const word = t(`chapters.${chapter}.word`);
+  const font = hasArabicScript(word) ? PERSIAN_FONT : FONT_FOR_CUT[cut];
   // Own boundary so a font swap never blanks the backdrop's Suspense tree.
   return (
     <Suspense fallback={null}>
@@ -89,7 +93,13 @@ interface TroikaLike {
 
 function Word({ word, font }: { word: string; font: string }) {
   const group = useRef<Group>(null);
-  const chars = useMemo(() => Array.from(word), [word]);
+  // Latin: one mesh per letter. Persian: one mesh per word (letters must stay joined), laid out
+  // right to left; the tracking spread then opens between words only.
+  const chars = useMemo(() => {
+    if (!hasArabicScript(word)) return Array.from(word);
+    const words = word.split(" ").reverse();
+    return words.flatMap((w, i) => (i < words.length - 1 ? [w, " "] : [w]));
+  }, [word]);
   const letterIdx = useMemo(() => {
     const idx: number[] = [];
     let n = 0;

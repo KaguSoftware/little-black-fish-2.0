@@ -1,0 +1,18 @@
+{
+  "backToWork": "همهٔ کارها",
+  "mediaVideo": "فیلم",
+  "mediaGallery": "گالری",
+  "imageCount": "{count} تصویر",
+  "play": "پخش",
+  "playLabel": "پخش {title}",
+  "loadingVideo": "پرده بالا می‌رود",
+  "watchOnYouTube": "تماشا در یوتیوب",
+  "imageAlt": "{title}، تصویر {n} از {total}",
+  "enlarge": "بزرگ کردن تصویر {n}",
+  "shrink": "برگرداندن تصویر {n} به جای خود",
+  "support": "از این پروژه حمایت کنید",
+  "previous": "قبلی",
+  "next": "بعدی",
+  "moreWork": "کارهای دیگر",
+  "metaFallback": "{title}، پروژه‌ای از ماهی سیاه کوچولو."
+}

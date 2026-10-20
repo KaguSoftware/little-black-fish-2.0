@@ -25,6 +25,13 @@ export const lantern = {
   radius: 240,
   /** 0..1 how far the idle wander has taken over from the cursor. */
   wander: 1,
+  /**
+   * The visitor is carrying the light: a cursor over the hero, or a held thumb. Only then
+   * does the wall lift the plate under it to the front. A tap or the idle wander never does.
+   */
+  engaged: false,
+  /** 0..1 eased "held": a thumb pressing on the hero swells the light. */
+  hold: 0,
   /** Ambient clock (seconds); frozen while motion is paused. */
   t: 0,
   /** 0..1 scroll fade (1 at rest, 0 once the hero has left). */
@@ -48,6 +55,10 @@ export interface LanternTickInput {
   pointerLive: boolean;
   /** ms since the pointer last moved. */
   idleMs: number;
+  /** The pointer is a mouse or pen (not a finger). */
+  fine: boolean;
+  /** A finger is pressing and holding the hero (touch only). */
+  held: boolean;
   paused: boolean;
   reduced: boolean;
   fade: number;
@@ -87,12 +98,15 @@ export function tickLantern(i: LanternTickInput) {
   const minDim = Math.min(L.w, L.h);
 
   // ── who holds the light ──
-  const wantsWander = !i.reduced && (!i.pointerLive || i.idleMs > 2000);
+  // A held thumb keeps the light even when it stops moving.
+  const wantsWander = !i.reduced && !i.held && (!i.pointerLive || i.idleMs > 2000);
   const targetW = wantsWander ? 1 : 0;
   // Slow hand-over to the wander path, quick grab back when the cursor returns.
   const kW = targetW > L.wander ? 0.7 : 5;
   L.wander += (targetW - L.wander) * (1 - Math.exp(-kW * dt));
   wanderAt(t, wp);
+  const over = i.px >= 0 && i.py >= 0 && i.px <= L.w && i.py <= L.h;
+  L.engaged = i.fade > 0.3 && (i.held || (i.fine && i.pointerLive && i.idleMs <= 2000 && over));
 
   let tx: number;
   let ty: number;
@@ -123,8 +137,14 @@ export function tickLantern(i: LanternTickInput) {
   const live = !i.paused && !i.reduced;
   const breathe = live ? Math.sin(t * 0.8) * 0.035 : 0;
   const flicker = live ? noise1(t * 9.5) * 0.022 + noise1(t * 23 + 4) * 0.01 : 0;
+  // Held: swells quickly under the thumb, settles back slowly once it lets go.
+  const kH = i.held ? 6 : 2.2;
+  L.hold += ((i.held ? 1 : 0) - L.hold) * (1 - Math.exp(-kH * dt));
   L.fade = i.fade;
-  L.radius = Math.max(0.0001, minDim * 0.34 * (1 + breathe + flicker) * clamp(i.fade, 0, 1));
+  L.radius = Math.max(
+    0.0001,
+    minDim * 0.34 * (1 + 0.5 * L.hold) * (1 + breathe + flicker) * clamp(i.fade, 0, 1),
+  );
 
   // ── colour walks the six teller accents ──
   if (i.reduced) {

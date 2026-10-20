@@ -48,6 +48,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* cqw = hero width (unlike vw, it excludes the scrollbar), so the name fits gutter to gutter */
+  container-type: inline-size;
 }
 
 .wordLayer {
@@ -55,21 +57,30 @@
   inset: 0;
   margin: 0;
   padding: 0 var(--gutter) calc(var(--gutter) + 5.25rem);
+  /* Desktop: two lines, LITTLE, then BLACK FISH. "BLACK FISH" is ~5.85em wide in Redaction
+     (with the 0.25em word gap and tracking): dividing the inner width by 5.9 would fill it
+     edge to edge; 7.4 sets it at about 80% of that. */
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
+  flex-flow: row wrap;
+  align-content: flex-end;
+  column-gap: 0.25em;
   font-weight: 400;
-  font-size: min(17vw, 29svh);
+  font-size: min(calc((100cqw - 2 * var(--gutter)) / 7.4), 22svh);
   line-height: 0.84;
   letter-spacing: -0.012em;
   text-transform: uppercase;
   user-select: none;
   -webkit-user-select: none;
+  /* Latin brand mark: keep it left to right in RTL too. */
+  direction: ltr;
 }
 
 .wordLine {
   display: block;
   white-space: nowrap;
+}
+.wordLine:first-child {
+  flex-basis: 100%;
 }
 
 .wordEroded {
@@ -187,9 +198,154 @@
   }
 }
 
+/* Touch: while a thumb holds the light, a wider ring shows around it (18px hides under a thumb). */
+.hero[data-holding="true"] .hand {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-color: oklch(0.93 0.012 80 / 0.35);
+}
+
+@media (pointer: coarse) {
+  .hero {
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Touch-only hint for the hold. Quiet like the rest of the dark: dim bone, no box, a slow
+   press-and-spread ring. The outer element fades it away for good; the inner one fades it in. */
+.holdHint {
+  display: none;
+  position: absolute;
+  top: max(7.5rem, 24svh);
+  right: var(--gutter);
+  margin: 0;
+  transition:
+    opacity 0.6s var(--ease-out-quint),
+    visibility 0s linear 0.6s;
+}
+@media (pointer: coarse) {
+  .holdHint {
+    display: block;
+  }
+}
+.holdHint[data-gone] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.holdHintInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+  text-shadow: 0 0 1.2em oklch(0.06 0.01 215 / 0.9);
+  animation: holdHintIn 1.4s var(--ease-out-quint) 1.8s both;
+}
+@keyframes holdHintIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.holdRing {
+  position: relative;
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  border: 1px solid oklch(0.93 0.012 80 / 0.4);
+}
+/* the thumb presses in and stays down... */
+.holdRing::before {
+  content: "";
+  position: absolute;
+  inset: 32%;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  animation: holdPress 3.4s var(--ease-out-quint) infinite;
+}
+/* ...and the light spreads from under it */
+.holdRing::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid oklch(0.93 0.012 80 / 0.5);
+  opacity: 0;
+  animation: holdSpread 3.4s var(--ease-out-expo) infinite;
+}
+@keyframes holdPress {
+  0%,
+  8% {
+    transform: scale(1);
+  }
+  18%,
+  62% {
+    transform: scale(0.55);
+  }
+  78%,
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes holdSpread {
+  0%,
+  18% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.6;
+  }
+  70%,
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+html[data-motion="paused"] .holdRing::before,
+html[data-motion="paused"] .holdRing::after {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .holdRing::before,
+  .holdRing::after {
+    animation: none;
+  }
+  .holdHintInner {
+    animation-name: holdHintFade;
+  }
+}
+@keyframes holdHintFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 700px) {
   .wordLayer {
-    font-size: min(27vw, 21svh);
+    flex-flow: column nowrap;
+    justify-content: flex-end;
+    gap: 0;
+    font-size: min(21.5vw, 17svh);
+  }
+  .wordLine:first-child {
+    flex-basis: auto;
   }
   .heroFoot {
     flex-direction: column;
@@ -198,7 +354,7 @@
   .cue {
     align-self: flex-end;
     position: absolute;
-    right: var(--gutter);
+    inset-inline-end: var(--gutter);
     bottom: var(--gutter);
   }
   .wordLayer {
@@ -347,6 +503,10 @@
   transform-origin: left center;
   transition: transform 0.8s var(--ease-out-quint);
 }
+:global(html[dir="rtl"]) .lookLine::after,
+:global(html[dir="rtl"]) .allWorkLine::after {
+  transform-origin: right center;
+}
 .look:hover .lookLine::after,
 .look:focus-visible .lookLine::after,
 .eyes[data-engaged="true"] .lookLine::after {
@@ -387,6 +547,8 @@
 
 .reelWindow {
   position: relative;
+  /* The strip is moved with physical translateX: keep it left to right in RTL. */
+  direction: ltr;
   width: 100%;
   height: calc((var(--fw) - 20px) * 0.5625 + 88px);
   overflow: hidden;
@@ -484,6 +646,34 @@
     linear-gradient(90deg, var(--stage-deep) 0%, transparent 24%, transparent 76%, var(--stage-deep) 100%);
 }
 
+.reelProgress {
+  padding-inline: calc((100vw - var(--fw)) / 2 + 12px);
+}
+.reelProgressTrack {
+  position: relative;
+  height: 1px;
+  background: var(--hairline);
+}
+.reelProgressFill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: color-mix(in oklab, var(--gate) 70%, var(--ink));
+  will-change: transform;
+}
+.reelProgressTick {
+  position: absolute;
+  top: -3px;
+  width: 1px;
+  height: 7px;
+  translate: -50% 0;
+  background: var(--hairline);
+  transition: background-color 0.3s var(--ease-out-quint);
+}
+.reelProgressTick[data-passed] {
+  background: color-mix(in oklab, var(--gate) 70%, var(--ink));
+}
+
 .reelCaption {
   min-height: 3.4rem;
   padding-inline: calc((100vw - var(--fw)) / 2 + 12px);
@@ -515,7 +705,7 @@
   color: color-mix(in oklab, var(--ink) 82%, var(--gate));
 }
 .reelCount {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--step--1);
   font-variant-numeric: tabular-nums;
   color: var(--ink-mute);
@@ -720,7 +910,7 @@
 
 .footName {
   margin: 0;
-  text-align: right;
+  text-align: end;
   font-family: var(--font-display);
   font-weight: 400;
   font-size: min(15vw, 26svh);
@@ -768,7 +958,7 @@
   font-family: var(--font-display);
   font-size: var(--step-3);
   line-height: 1.05;
-  text-align: left;
+  text-align: start;
   color: var(--ink);
   cursor: pointer;
   transition:
@@ -829,6 +1019,29 @@
   margin: clamp(3rem, 8vw, 6rem) 0 0;
   font-size: var(--step--1);
   color: var(--ink-mute);
+}
+
+/* Legal line with the Enamad seal tucked at the far end: small and dim until hovered. */
+.footBase {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.enamad {
+  flex: none;
+  line-height: 0;
+  opacity: 0.5;
+  transition: opacity 0.4s var(--ease-out-quint);
+}
+.enamad:hover,
+.enamad:focus-within {
+  opacity: 1;
+}
+.enamad img {
+  display: block;
+  width: 56px;
+  height: auto;
 }
 
 @media (max-width: 700px) {

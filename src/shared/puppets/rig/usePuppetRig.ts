@@ -325,9 +325,8 @@ function drive(S: RigState, I: RigInputs, delta: number): void {
     S.spinPhase += dt * mood.spin * 4.4;
     spinYaw = Math.sin(S.spinPhase) * Math.min(0.75, mood.spin * 5.5);
   }
-  const shiver = anger > 0.05 ? noise1(t * 26 + S.seed) * 0.012 * anger * rm : 0;
   const scXZ = 1 / Math.sqrt(Math.max(scY, 0.5));
-  const rootYaw = I.rotY + spinYaw + shiver;
+  const rootYaw = I.rotY + spinYaw;
   if (S.root) {
     S.root.o.position.set(S.root.px + I.x, S.root.py + rootY, S.root.pz + I.z);
     S.root.o.rotation.set(S.root.rx, S.root.ry + rootYaw, S.root.rz);
@@ -357,7 +356,7 @@ function drive(S: RigState, I: RigInputs, delta: number): void {
   wantYaw += noise1(t * 0.23 + S.seed) * 0.07 * idleAmt;
   wantPitch += noise1(t * 0.31 + S.seed + 9) * 0.035 * idleAmt;
 
-  // twitch: quick small jerks (skittish creature, angry king)
+  // twitch: wary glances (skittish creature, angry king), eased in and held, never a jerk
   const tw = reduced ? 0 : mood.twitch + anger * 0.25 + surprise * 0.2;
   if (tw > 0.01 && !frozen) {
     if (t >= S.nextTwitch) {
@@ -366,15 +365,9 @@ function drive(S: RigState, I: RigInputs, delta: number): void {
       const b = hash1(i * 5.31 + S.seed + 2);
       S.twTargetYaw = a * 0.24 * Math.min(1, tw + 0.2);
       S.twTargetPitch = b * 0.13 * Math.min(1, tw + 0.2);
-      S.twEnd = t + 0.1 + r01(i + S.seed) * 0.12;
+      S.twEnd = t + 0.6 + r01(i + S.seed) * 0.6;
       S.nextTwitch = t + (0.6 + r01(i * 2.1 + S.seed) * 2.6) / (0.25 + tw * 1.6);
-      if (!S.twSecond && r01(i * 7.7 + S.seed) < 0.35) {
-        S.twSecond = true;
-        S.nextTwitch = S.twEnd + 0.1;
-      } else {
-        S.twSecond = false;
-      }
-      S.jolt = Math.max(S.jolt, 0.45);
+      S.twSecond = false;
       if (r01(i * 1.9 + S.seed) < 0.4) S.nextBlink = Math.min(S.nextBlink, t + 0.04);
     }
     if (t > S.twEnd) {
@@ -385,8 +378,8 @@ function drive(S: RigState, I: RigInputs, delta: number): void {
     S.twTargetYaw = 0;
     S.twTargetPitch = 0;
   }
-  const twYaw = S.twYaw.step(S.twTargetYaw, 30, dt);
-  const twPitch = S.twPitch.step(S.twTargetPitch, 30, dt);
+  const twYaw = S.twYaw.step(S.twTargetYaw, 5, dt);
+  const twPitch = S.twPitch.step(S.twTargetPitch, 5, dt);
 
   const headYaw = S.yaw.step(wantYaw, 8, dt);
   const headPitchLook = S.pitch.step(wantPitch, 8, dt);
@@ -483,14 +476,13 @@ function drive(S: RigState, I: RigInputs, delta: number): void {
   const swayRoll =
     (Math.sin(t * TAU * swayHz + S.seed) * mood.sway + Math.sin(t * TAU * swayHz * 0.37 + S.seed * 2 + 1.7) * mood.sway * 0.5) * rm;
   const weightShift = walk * 0.045 * Math.cos(phase) * (quad ? 0.5 : 1);
-  const tremor = anger > 0.05 ? noise1(t * 31 + S.seed + 3) * 0.008 * anger * rm : 0;
   const hopLagT = clamp(-vy * 0.35, -0.12, 0.12);
   const lag = S.bodyLag.step(hopLagT, 60, 9, dt);
   const talkNod = talk * Math.sin(S.sylPhase * 0.5) * 0.012;
   const bodyPitch =
     mood.slump * 0.4 + anger * 0.1 - surprise * 0.09 + walk * 0.035 + snapOpen * 0.09 + talkNod + lag * 0.5 +
     (quad ? Math.sin(phase * 2) * 0.02 * walk : 0);
-  const bodyRoll = swayRoll + weightShift + tremor;
+  const bodyRoll = swayRoll + weightShift;
   const bodyYaw = headYaw * 0.22;
   const breathRate = 1.9 + anger * 0.9 + walk * 0.8;
   const breath = Math.sin(t * breathRate + S.seed) * (0.011 + anger * 0.008 + walk * 0.006);

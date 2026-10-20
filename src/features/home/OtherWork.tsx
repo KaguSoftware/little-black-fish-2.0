@@ -1,25 +1,34 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "motion/react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRef } from "react";
-import { PROJECTS } from "@/shared/content/site";
-import type { Project } from "@/shared/content/site";
-import { STILL_BY_ID, stillCard } from "@/shared/content/stills";
+import { getPathname } from "@/i18n/navigation";
+import { cardImage, type ProjectCard } from "@/shared/data/cards";
 import { useUI } from "@/shared/state/store";
 import { navigateWithIris } from "@/shared/transition/navigate";
 import s from "./home.module.css";
 
-const TEASERS = PROJECTS.filter((p) => !p.featured).slice(0, 3);
 /** Large, small, medium: image-led, deliberately unequal. */
 const SIZES = ["large", "small", "medium"] as const;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function Teaser({ project, size, index }: { project: Project; size: (typeof SIZES)[number]; index: number }) {
+/** Plain <a> for the iris transition; the href attribute still carries the locale for new tabs. */
+function irisClick(href: string) {
+  return (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    navigateWithIris(href, e);
+  };
+}
+
+function Teaser({ card, size, index }: { card: ProjectCard; size: (typeof SIZES)[number]; index: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
+  const locale = useLocale();
   const reduced = useUI((st) => st.reducedMotion);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const drift = useTransform(scrollYProgress, [0, 1], reduced ? ["0%", "0%"] : ["-7%", "7%"]);
-  const still = STILL_BY_ID[project.still];
+  const sizes = size === "large" ? "(max-width: 800px) 100vw, 62vw" : "(max-width: 800px) 80vw, 36vw";
 
   const onMove = (e: React.PointerEvent<HTMLElement>) => {
     const el = e.currentTarget;
@@ -31,11 +40,9 @@ function Teaser({ project, size, index }: { project: Project; size: (typeof SIZE
   return (
     <a
       ref={ref}
-      href={project.href}
+      href={getPathname({ href: card.href, locale })}
       className={`${s.teaser} ${s[`teaser_${size}`]}`}
-      onClick={(e) => {
-        if (project.href === "#") e.preventDefault();
-      }}
+      onClick={irisClick(card.href)}
     >
       <motion.div
         className={s.teaserPlate}
@@ -47,20 +54,16 @@ function Teaser({ project, size, index }: { project: Project; size: (typeof SIZE
       >
         <motion.div className={s.teaserImg} style={{ y: drift }}>
           <picture>
-            <source
-              type="image/avif"
-              srcSet={`${stillCard(project.still, 640, "avif")} 640w, ${stillCard(project.still, 1200, "avif")} 1200w`}
-              sizes={size === "large" ? "(max-width: 800px) 100vw, 62vw" : "(max-width: 800px) 80vw, 36vw"}
-            />
-            <img
-              src={stillCard(project.still, 1200, "webp")}
-              srcSet={`${stillCard(project.still, 640, "webp")} 640w, ${stillCard(project.still, 1200, "webp")} 1200w`}
-              sizes={size === "large" ? "(max-width: 800px) 100vw, 62vw" : "(max-width: 800px) 80vw, 36vw"}
-              alt={still.alt}
-              loading="lazy"
-              decoding="async"
-              draggable={false}
-            />
+            {card.image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                {...cardImage(card.image, sizes)}
+                alt={card.title}
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+              />
+            )}
           </picture>
         </motion.div>
         <div className={s.teaserShade} aria-hidden />
@@ -73,38 +76,31 @@ function Teaser({ project, size, index }: { project: Project; size: (typeof SIZE
         viewport={{ once: true, amount: 0.6 }}
         transition={{ duration: 0.6, ease: EASE, delay: 0.25 }}
       >
-        <span className={s.teaserTitle}>{project.title}</span>
-        <span className={s.teaserMeta}>
-          {project.role} · {project.year}
-        </span>
+        <span className={s.teaserTitle}>{card.title}</span>
+        {card.categoryName && <span className={s.teaserMeta}>{card.categoryName}</span>}
       </motion.div>
     </a>
   );
 }
 
-export function OtherWork() {
+export function OtherWork({ projects }: { projects: ProjectCard[] }) {
+  const t = useTranslations("home.work");
+  const locale = useLocale();
+  const teasers = projects.slice(0, SIZES.length);
   return (
     <section id="work" className={s.work} aria-labelledby="work-title">
       <header className={s.workHead}>
         <h2 id="work-title" className={s.workTitle}>
-          Other work
+          {t("title")}
         </h2>
-        <a
-          href="/projects"
-          className={s.allWork}
-          onClick={(e) => {
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-            e.preventDefault();
-            navigateWithIris("/projects", e);
-          }}
-        >
-          <span>All work</span>
+        <a href={getPathname({ href: "/projects", locale })} className={s.allWork} onClick={irisClick("/projects")}>
+          <span>{t("all")}</span>
           <span className={s.allWorkLine} aria-hidden />
         </a>
       </header>
       <div className={s.workGrid}>
-        {TEASERS.map((p, i) => (
-          <Teaser key={p.slug} project={p} size={SIZES[i]} index={i} />
+        {teasers.map((c, i) => (
+          <Teaser key={c.id} card={c} size={SIZES[i]} index={i} />
         ))}
       </div>
     </section>

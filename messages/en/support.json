@@ -1,0 +1,22 @@
+{
+  "eyebrow": "Support",
+  "studioTitle": "Support the Studio",
+  "studioIntro": "Independent cinema and animation, funded by the people who watch it.",
+  "switcherLabel": "Projects to support",
+  "progressLabel": "episodes released so far",
+  "chooseHeading": "Choose how to support",
+  "projectCta": "Support this project",
+  "worldwide": {
+    "heading": "Paying from outside Iran",
+    "label": "Support in Dollars",
+    "caption": "Card, any amount"
+  },
+  "iran": {
+    "heading": "Paying from inside Iran",
+    "label": "Support in Rial",
+    "caption": "Iranian bank card"
+  },
+  "disclaimer": "Support is voluntary and no product or service is provided in return. It is not a purchase, an investment, ownership or commercial sponsorship. It is simply a way to stand behind the making of this project.",
+  "thanks": "Thank you. Questions about supporting the series: <contact>get in touch</contact>",
+  "metaSuffix": "Little Black Fish Studios"
+}

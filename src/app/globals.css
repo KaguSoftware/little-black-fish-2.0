@@ -10,6 +10,8 @@
 @import "@fontsource/schibsted-grotesk/400.css";
 @import "@fontsource/schibsted-grotesk/500.css";
 @import "@fontsource/schibsted-grotesk/600.css";
+/* Persian: Latin glyphs stay on Redaction/Schibsted; Arabic-script glyphs fall through to Vazirmatn. */
+@import "@fontsource-variable/vazirmatn/wght.css";
 
 /*
  * Theatrical black. --hue is the current stage tint (pages/tellers update it).
@@ -38,12 +40,12 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
 
-  --font-display: "Redaction", "Times New Roman", serif;
+  --font-display: "Redaction", "Vazirmatn Variable", "Times New Roman", serif;
   --font-display-10: "Redaction 10", var(--font-display);
   --font-display-35: "Redaction 35", var(--font-display);
   --font-display-70: "Redaction 70", var(--font-display);
   --font-display-100: "Redaction 100", var(--font-display);
-  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Schibsted Grotesk", "Vazirmatn Variable", ui-sans-serif, system-ui, sans-serif;
 
   --gutter: clamp(1rem, 3.2vw, 2.75rem);
   --step--1: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
@@ -98,6 +100,23 @@ body {
   font-weight: 400;
   line-height: 0.92;
   letter-spacing: -0.01em;
+}
+
+/*
+ * Persian. Tracking breaks the joins of Arabic-script letters, so any letter-spacing
+ * set for the Latin design is cancelled on Persian text (Latin runs marked lang="en"
+ * keep theirs). Vazirmatn's tall ascenders and deep descenders need more leading than
+ * Redaction/Schibsted, so body copy and plain headings get a little more room; a page
+ * that needs a different value sets it with a more specific selector.
+ */
+:lang(fa) {
+  letter-spacing: 0 !important;
+}
+html:lang(fa) body {
+  line-height: 1.8;
+}
+:is(h1, h2, h3, .display):lang(fa) {
+  line-height: 1.25;
 }
 
 .sr-only-focusable:not(:focus):not(:focus-within) {

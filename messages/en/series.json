@@ -1,0 +1,50 @@
+{
+  "metaTitle": "Shahnameh",
+  "metaDescription": "One story, six points of view. Switch teller at any moment and hear the same story from another side.",
+  "seriesTitle": "Shahnameh",
+  "srHeading": "The series, told by six characters",
+  "scrollHint": "Scroll, or just watch.",
+  "watch": "Watch the series",
+  "chapterLabel": "{number} · {title}",
+  "chapters": {
+    "look": { "word": "LOOK CLOSER", "title": "Look closer" },
+    "hello": { "word": "HELLO", "title": "Hello" },
+    "world": { "word": "MY WORLD", "title": "My world" },
+    "day": { "word": "THE DAY", "title": "The day" },
+    "did": { "word": "WHAT I DID", "title": "What I did" },
+    "others": { "word": "THE OTHERS", "title": "The others" },
+    "maker": { "word": "MY MAKER", "title": "My maker" }
+  },
+  "roles": {
+    "child": "the Child",
+    "elder": "the Elder",
+    "snake-king": "the Snake King",
+    "silver-one": "the Silver One",
+    "masked-lady": "the Masked Lady",
+    "creature": "the Creature"
+  },
+  "moods": {
+    "bouncy": "Bright, restless, cannot stand still",
+    "bored": "Slow, heavy, has seen it all",
+    "angry": "Sharp, loud, fists closed",
+    "dreamy": "Floating, mirror-bright",
+    "ceremonial": "Measured, every word placed",
+    "skittish": "Wary, quick to flinch"
+  },
+  "narration": {
+    "hello": "Oh. Hi. I'm {name}.",
+    "maker": "Little Black Fish made me. Here's what else they made."
+  },
+  "tellerLabel": "{name}, {role}",
+  "hearFrom": "Hear it from {name}, {role}",
+  "tellingNowLabel": "{name}, {role}, telling now",
+  "tellingNow": "Telling now",
+  "castLabel": "The other tellers",
+  "switcherLabel": "Who tells the story",
+  "maker": {
+    "heading": "More from {studio}",
+    "kicker": "Selected work",
+    "allWork": "All work",
+    "sayHello": "Say hello"
+  }
+}

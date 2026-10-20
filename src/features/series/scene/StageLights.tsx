@@ -21,7 +21,7 @@ const KEY_INTENSITY = 120;
 const KEY_ANGLE = 0.4;
 const KEY_PENUMBRA = 0.9;
 const KEY_AIM_Y = 0.9;
-/** THE DAY dims the key a little and flickers it. */
+/** THE DAY dims the key a little and lets it pulse slowly, like a lamp losing power. */
 const KEY_DAY_DIM = 0.3;
 const KEY_DAY_FLICKER = 0.16;
 
@@ -76,7 +76,7 @@ export function StageLights() {
     if (k) {
       k.position.set(hx + KEY_POS[0], KEY_POS[1], hz + KEY_POS[2]);
       keyTarget.position.set(hx, KEY_AIM_Y, hz);
-      const flicker = ui.reducedMotion ? 0 : noise1(t.current * 23) * 0.5 + noise1(t.current * 9.1 + 4) * 0.5;
+      const flicker = ui.reducedMotion ? 0 : noise1(t.current * 0.9) * 0.6 + noise1(t.current * 0.37 + 4) * 0.4;
       k.intensity = KEY_INTENSITY * (1 - KEY_DAY_DIM * day + KEY_DAY_FLICKER * day * flicker);
     }
     const r = rim.current;

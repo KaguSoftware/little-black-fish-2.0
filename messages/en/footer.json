@@ -1,0 +1,11 @@
+{
+  "name": "Little Black Fish",
+  "hello": "Say hello.",
+  "copyEmail": "Copy email address {email}",
+  "copied": "Copied",
+  "legal": "Little Black Fish, {year}",
+  "socials": {
+    "Instagram": "Instagram",
+    "YouTube": "YouTube"
+  }
+}

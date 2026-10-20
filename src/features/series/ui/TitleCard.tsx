@@ -1,17 +1,18 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
-import { SITE } from "@/shared/content/site";
 import { runtime } from "@/shared/lib/runtime";
 import { useUI } from "@/shared/state/store";
 import { enterMotion } from "./lib/enter";
 
 /**
- * "[SERIES TITLE]" at the bottom of chapter 00. The outer wrapper plays the enter recipe;
+ * The series title (series.seriesTitle) at the bottom of chapter 00. The outer wrapper plays the enter recipe;
  * an inner layer is driven per frame by fx.closeUp so it fades out during the pullback.
  */
 export function TitleCard() {
+  const t = useTranslations("series");
   const rm = useUI((s) => s.reducedMotion);
   const inner = useRef<HTMLDivElement>(null);
 
@@ -52,13 +53,13 @@ export function TitleCard() {
             textShadow: "0 0 32px oklch(0.06 0.01 var(--hue) / 0.7)",
           }}
         >
-          {SITE.seriesTitle}
+          {t("seriesTitle")}
         </p>
         <p
           className="mt-3 text-[length:var(--step--1)]"
           style={{ color: "var(--ink-dim)", textShadow: "0 0 14px oklch(0.06 0.01 var(--hue) / 0.9)" }}
         >
-          Scroll, or just watch.
+          {t("scrollHint")}
         </p>
       </div>
     </motion.div>

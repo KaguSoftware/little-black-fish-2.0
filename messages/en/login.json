@@ -1,0 +1,14 @@
+{
+  "metaTitle": "Sign in",
+  "kicker": "Studio only",
+  "title": "Backstage",
+  "intro": "Sign in to tend the work, the stage and the letters people send.",
+  "email": "Email",
+  "password": "Password",
+  "submit": "Sign in",
+  "pending": "Signing in…",
+  "invalid": "That email and password don’t match an account.",
+  "forbidden": "This account doesn’t have access to the studio’s admin.",
+  "failed": "Couldn’t sign in. Check your connection and try again.",
+  "back": "Back to the site"
+}

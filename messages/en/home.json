@@ -1,0 +1,22 @@
+{
+  "hero": {
+    "label": "Little Black Fish",
+    "name": "Little Black Fish",
+    "tagline": "Creative storytelling from cinema to animation.",
+    "hold": "Press and hold to carry the light",
+    "cue": "Into the dark"
+  },
+  "eyes": {
+    "title": "Shahnameh",
+    "look": "Look closer"
+  },
+  "reel": {
+    "label": "Six voices, one story",
+    "title": "Six voices. One story.",
+    "caption": "{name}, {role}"
+  },
+  "work": {
+    "title": "Other work",
+    "all": "All work"
+  }
+}

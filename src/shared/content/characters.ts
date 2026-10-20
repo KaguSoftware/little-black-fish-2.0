@@ -8,8 +8,9 @@ import { CHAPTER_BY_ID } from "./chapters";
  * House style: no em dashes in copy.
  */
 
-const HELLO = (name: string) => `Oh. Hi. I'm ${name}.`;
-const MAKER = "Little Black Fish made me. Here's what else they made.";
+/** Shared line templates. When a teller still uses them, the UI shows the localized version (series.json "narration"). */
+export const HELLO = (name: string) => `Oh. Hi. I'm ${name}.`;
+export const MAKER = "Little Black Fish made me. Here's what else they made.";
 
 export const TELLERS: readonly Teller[] = [
   {

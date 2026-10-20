@@ -2,6 +2,7 @@
 
 import Lenis from "lenis";
 import { useCallback, useEffect, useRef } from "react";
+import type { ProjectCard } from "@/shared/data/cards";
 import { useUI } from "@/shared/state/store";
 import { EyesCTA } from "./EyesCTA";
 import { Footer } from "./Footer";
@@ -24,7 +25,7 @@ const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
  * also plays itself: after a long dwell it drifts down through the eyes and the reel; the
  * first wheel, touch, key or press stops that for good.
  */
-export function HomePage() {
+export function HomePage({ projects }: { projects: ProjectCard[] }) {
   const reduced = useUI((st) => st.reducedMotion);
   const paused = useUI((st) => st.paused);
   const lenisRef = useRef<Lenis | null>(null);
@@ -105,7 +106,7 @@ export function HomePage() {
         <Hero onCue={() => scrollToId("eyes", 2.2)} />
         <EyesCTA />
         <ReelStrip />
-        <OtherWork />
+        <OtherWork projects={projects} />
       </main>
       <Footer />
     </>

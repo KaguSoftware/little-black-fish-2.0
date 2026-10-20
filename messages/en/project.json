@@ -1,0 +1,18 @@
+{
+  "backToWork": "All work",
+  "mediaVideo": "Film",
+  "mediaGallery": "Gallery",
+  "imageCount": "{count} images",
+  "play": "Play",
+  "playLabel": "Play {title}",
+  "loadingVideo": "Raising the curtain",
+  "watchOnYouTube": "Watch on YouTube",
+  "imageAlt": "{title}, image {n} of {total}",
+  "enlarge": "Enlarge image {n}",
+  "shrink": "Return image {n} to its place",
+  "support": "Support this project",
+  "previous": "Previous",
+  "next": "Next",
+  "moreWork": "More work",
+  "metaFallback": "{title}, a project by Little Black Fish."
+}

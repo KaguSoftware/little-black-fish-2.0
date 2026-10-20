@@ -5,7 +5,7 @@ import { TELLERS, TELLER_BY_ID, TELLER_IDS } from "../content/characters";
 import { MOODS, blendMoods } from "../content/moods";
 import { mixLab, oklabCss, oklabToLinear, oklchToOklab, stageOklch, type Lab } from "./color";
 import {
-  TAU, bell, clamp, easeInCubic, easeInOutCubic, easeOutQuint, lerp, smootherstep, smoothstep,
+  bell, clamp, easeInCubic, easeInOutCubic, easeOutQuint, lerp, smootherstep, smoothstep,
 } from "./math";
 import { runtime, type FrameParams } from "./runtime";
 
@@ -25,6 +25,8 @@ export const HERO_X = 1.15;
 export const HERO_H = 1.8;
 /** Blend rate: exp(-K * 0.9s) ≈ 0.01 → settled in ~0.9 s. */
 const BLEND_K = 5.1;
+/** Yaw (radians) the hero turns toward the next mark while walking: a three-quarter profile. */
+const WALK_TURN = 1.15;
 /** Dive: fraction of the dive segment spent approaching the eye (the rest is the iris opening). */
 export const DIVE_SPLIT = 0.55;
 
@@ -139,7 +141,8 @@ export function computeFrame(input: DirectorInput): FrameParams {
     const e = smootherstep(s);
     f.hero.x = lerp(xa, xb, e);
     const dir = Math.sign(xb - xa) || 1;
-    f.hero.rotY = TAU * easeInOutCubic(s) * dir;
+    // Turn toward the next mark, walk, then turn back to face the audience.
+    f.hero.rotY = dir * WALK_TURN * smoothstep(0, 0.3, s) * (1 - smoothstep(0.7, 1, s));
     f.hero.walk = bell(s, 0.5);
     f.hero.stride = Math.abs(xb - xa) * e + s * 1.2;
   } else if (seg.kind === "dive") {

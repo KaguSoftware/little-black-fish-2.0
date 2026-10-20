@@ -65,7 +65,7 @@ const HUMAN = {
  * keeps the arms on the body (Eblis's are hidden inside the cloak, so swinging them only clips).
  */
 const CHARACTERS = {
-  keyumars: { ...HUMAN },
+  keyumars: { ...HUMAN, eye: [0.026, 1.742] }, // stone block mask: eye holes sit high
   siyamak: { ...HUMAN },
   arnavaz: { ...HUMAN, shoulder: [0.185, 1.43, -0.005] },
   shahrnaz: { ...HUMAN },
@@ -77,9 +77,10 @@ const CHARACTERS = {
 // ── classification by name ────────────────────────────────────────────────
 const FACE = new Set([
   "Head", "Nose", "Mask", "MaskBack", "MaskNose", "CollageMask", "EyeSlit", "Mouth", "Scalp", "ScalpBack",
+  "StoneMask", "StoneMaskNose", "MaskEye", "MaskMouth",
   "CrownBand", "CrownBalls", "CrownBeads", "CrownSpikes", "CrownJewels", "Eye", "Lid", "Brow", "Horn", "SnoutTip",
 ]);
-const HEAD = new Set(["HairCards", "HairBase", "Fringe", "Tassel"]);
+const HEAD = new Set(["HairCards", "HairBase", "BeardCards", "Fringe", "Tassel"]);
 const ARM = new Set([
   "Arm", "ArmR", "Deltoid", "Sleeve", "Cuff", "Cuff2", "Wrist", "Hand", "Palm", "Finger", "Thumb", "Frill", "Frill2",
   "PuffSleeve",
