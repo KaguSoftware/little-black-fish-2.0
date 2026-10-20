@@ -6,6 +6,7 @@ import type { Lab, RGB } from "./color";
 import type { Resolved } from "../content/chapters";
 import { resolveProgress } from "../content/chapters";
 import { TELLER_IDS, FIRST_TELLER } from "../content/characters";
+import { pointer } from "./pointer";
 
 /**
  * Mutable per-frame state shared by the 3D scene and DOM rAF loops.
@@ -96,7 +97,7 @@ export const runtime = {
   /** Spring-smoothed story progress. */
   progress: 0,
   /** Pointer in NDC (-1..1, y up) and viewport px. */
-  pointer: { x: 0, y: 0, px: 0, py: 0, active: false, lastMove: 0 },
+  pointer,
   /** Hero anchors in world space, written by Character each frame. */
   hero: {
     eyeL: new Vector3(0, 1.6, 0.1),

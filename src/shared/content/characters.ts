@@ -33,6 +33,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s10", day: "s13", did: "s07", others: "s09" },
     portrait: { still: "s09", focus: [50, 30] },
+    model: "/models/siyamak.glb",
   },
   {
     id: "elder",
@@ -53,8 +54,9 @@ export const TELLERS: readonly Teller[] = [
       others: "I'm not the only one with a side of this. Mine is the accurate one.", // PLACEHOLDER
       maker: MAKER,
     },
-    plates: { world: "s14", day: "s06", did: "s08", others: "s07" },
-    portrait: { still: "s08", focus: [78, 35] },
+    plates: { world: "s14", day: "s06", did: "s07", others: "s08" },
+    portrait: { still: "s08", focus: [93, 35] },
+    model: "/models/keyumars.glb",
   },
   {
     id: "snake-king",
@@ -76,7 +78,8 @@ export const TELLERS: readonly Teller[] = [
       maker: MAKER,
     },
     plates: { world: "s03", day: "s20", did: "s19", others: "s24" },
-    portrait: { still: "s05", focus: [16, 40] },
+    portrait: { still: "s05", focus: [0, 40] },
+    model: "/models/zahhak.glb",
   },
   {
     id: "silver-one",
@@ -99,7 +102,8 @@ export const TELLERS: readonly Teller[] = [
       maker: MAKER,
     },
     plates: { world: "s17", day: "s16", did: "s21", others: "s15" },
-    portrait: { still: "s22", focus: [15, 30] },
+    portrait: { still: "s22", focus: [0, 30] },
+    model: "/models/eblis.glb",
   },
   {
     id: "masked-lady",
@@ -121,7 +125,8 @@ export const TELLERS: readonly Teller[] = [
       maker: MAKER,
     },
     plates: { world: "s12", day: "s27", did: "s17", others: "s12" },
-    portrait: { still: "s26", focus: [14, 35] },
+    portrait: { still: "s26", focus: [0, 35] },
+    model: "/models/arnavaz.glb",
   },
   {
     id: "creature",
@@ -143,7 +148,8 @@ export const TELLERS: readonly Teller[] = [
       maker: MAKER,
     },
     plates: { world: "s12", day: "s20", did: "s07", others: "s23" },
-    portrait: { still: "s23", focus: [22, 55] },
+    portrait: { still: "s23", focus: [3, 50] },
+    model: "/models/horse.glb",
   },
 ];
 
@@ -201,3 +207,6 @@ export function castFor(teller: Teller, chapter: ChapterId): CastSpot[] {
       return [];
   }
 }
+
+/** Clean 600×800 (3:4) face crop per teller, baked by scripts/optimize-images.mjs. Prefer this over portrait.still + focus. */
+export const tellerPortrait = (id: TellerId) => `/portraits/${id}.webp`;

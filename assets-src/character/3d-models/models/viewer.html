@@ -1,0 +1,101 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head>
+<body style="margin:0;background:#000"><canvas id="c"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+let W = 900, H = 1300;
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const BG = new THREE.Color('#8b8a87');
+scene.background = BG;
+const pm = new THREE.PMREMGenerator(renderer);
+// Studio environment: grey cyclorama with large softboxes, so metals and chrome reflect light like the photo references.
+function studioEnv() {
+  const es = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, uniforms: {},
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); }',
+    fragmentShader: 'varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 top = vec3(0.62,0.62,0.63); vec3 mid = vec3(0.42,0.42,0.42); vec3 bot = vec3(0.16,0.15,0.14); vec3 c = h > 0. ? mix(mid, top, pow(h, 0.6)) : mix(mid, bot, pow(-h, 0.5)); gl_FragColor = vec4(c, 1.); }'
+  }));
+  es.add(room);
+  const box = (w, h, pos, look, inten) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(inten, inten, inten * 0.97), side: THREE.DoubleSide }));
+    m.position.set(...pos); m.lookAt(...look); es.add(m);
+  };
+  box(6, 4, [4, 7, 6], [0, 0, 0], 6.0);     // key softbox
+  box(5, 5, [-7, 3, 4], [0, 1, 0], 2.2);    // fill
+  box(3, 8, [-3, 4, -7], [0, 1, 0], 3.0);   // rim strip
+  box(8, 2, [0, 9, 0], [0, 0, 0], 2.5);     // overhead
+  box(2, 6, [7, 2, -2], [0, 1, 0], 1.6);    // side kicker
+  return pm.fromScene(es, 0.02).texture;
+}
+scene.environment = studioEnv();
+window.envIntensity = (v) => { scene.traverse(o => { if (o.material && 'envMapIntensity' in o.material) o.material.envMapIntensity = v; }); };
+
+scene.add(new THREE.HemisphereLight('#ffffff', '#6a6560', 0.45));
+const key = new THREE.DirectionalLight('#fff3e4', 2.2);
+key.position.set(3, 5, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3, near: 0.5, far: 15 });
+key.shadow.bias = -0.0005;
+scene.add(key);
+const fill = new THREE.DirectionalLight('#dbe6ff', 0.7); fill.position.set(-4, 2, 3); scene.add(fill);
+const rim = new THREE.DirectionalLight('#ffffff', 1.1); rim.position.set(-2, 3, -4); scene.add(rim);
+
+const ground = new THREE.Mesh(new THREE.CircleGeometry(6, 48), new THREE.ShadowMaterial({ opacity: 0.35 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+const camera = new THREE.PerspectiveCamera(24, W / H, 0.1, 50);
+let current = null, frame = { ty: 0.9, dist: 6.5 };
+
+window.loadChar = async (name) => {
+  const mod = await import('/chars/' + name + '.js?' + Date.now());
+  if (current) scene.remove(current);
+  current = mod.build();
+  current.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(current);
+  frame = mod.frame || frame;
+  { let i = 0; current.traverse(o => { if (o.isMesh) { i++; const a = o.geometry.attributes.position.array; let bad = 0; for (let k = 0; k < a.length; k++) if (!Number.isFinite(a[k])) bad++; if (bad) console.log('NaN geometry in mesh #' + i, o.geometry.type, bad, 'of', a.length); } }); }
+  let tris = 0;
+  current.traverse(o => { if (o.isMesh) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
+  return { tris: Math.round(tris), frame };
+};
+
+window.setSize = (w, h) => { W = w; H = h; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+
+window.shot = (deg, f) => {
+  const fr = f || frame;
+  current.rotation.y = deg * Math.PI / 180;
+  camera.fov = fr.fov || 24;
+  camera.updateProjectionMatrix();
+  camera.position.set(0, fr.ty + (fr.camY || 0), fr.dist);
+  camera.lookAt(0, fr.ty, 0);
+  renderer.render(scene, camera);
+  return canvas.toDataURL('image/png');
+};
+
+window.exportGlb = () => new Promise((res, rej) => {
+  current.rotation.y = 0;
+  new GLTFExporter().parse(current, (buf) => {
+    const u8 = new Uint8Array(buf); let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    res(btoa(s));
+  }, rej, { binary: true, maxTextureSize: 1024 });
+});
+window.ready = true;
+</script></body></html>

@@ -2,11 +2,11 @@
 
 import { useEffect } from "react";
 import { useUI } from "../state/store";
-import { runtime } from "../lib/runtime";
+import { pointer } from "../lib/pointer";
 
 /**
  * Client-side environment: reduced-motion preference, quality tier, and a single
- * global pointer tracker that writes NDC + px into `runtime.pointer` (no React state).
+ * global pointer tracker that writes NDC + px into `pointer` (= `runtime.pointer`) (no React state).
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const setReducedMotion = useUI((s) => s.setReducedMotion);
@@ -25,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     setQuality(coarse || small || weak ? "low" : "high");
 
     const onMove = (e: PointerEvent) => {
-      const p = runtime.pointer;
+      const p = pointer;
       p.px = e.clientX;
       p.py = e.clientY;
       p.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -34,7 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       p.lastMove = performance.now();
     };
     const onLeave = () => {
-      runtime.pointer.active = false;
+      pointer.active = false;
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     document.documentElement.addEventListener("pointerleave", onLeave);

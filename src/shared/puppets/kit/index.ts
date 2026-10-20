@@ -1,0 +1,10 @@
+export * from "./canvas";
+export * from "./shaderPatch";
+export * from "./materials";
+export * from "./hair";
+export * from "./fur";
+export * from "./cloth";
+export * from "./tubes";
+export * from "./presence";
+export * from "./rig";
+export { StageEnvironment } from "./environment";

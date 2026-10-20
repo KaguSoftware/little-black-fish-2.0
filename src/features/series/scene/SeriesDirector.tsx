@@ -1,6 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
+import { useRef } from "react";
 import { computeFrame } from "@/shared/lib/director";
 import { useSeries, useUI } from "@/shared/state/store";
 
@@ -10,6 +11,7 @@ import { useSeries, useUI } from "@/shared/state/store";
  * pushes discrete changes (chapter, nav visibility) to React state.
  */
 export function SeriesDirector() {
+  const css = useRef({ accent: "", stage: "" });
   useFrame((state, delta) => {
     const s = useSeries.getState();
     const ui = useUI.getState();
@@ -26,9 +28,11 @@ export function SeriesDirector() {
     const hideNav = f.r.chapterIndex < 5;
     if (ui.navHidden !== hideNav) ui.setNavHidden(hideNav);
     // Expose the blended accent + stage to CSS for DOM overlays.
+    // Only on change: these sit on :root, so every write restyles the whole document.
     const root = document.documentElement.style;
-    root.setProperty("--accent", f.accentCss);
-    root.setProperty("--stage", f.bgCss);
+    const last = css.current;
+    if (f.accentCss !== last.accent) root.setProperty("--accent", (last.accent = f.accentCss));
+    if (f.bgCss !== last.stage) root.setProperty("--stage", (last.stage = f.bgCss));
   }, -100);
   return null;
 }

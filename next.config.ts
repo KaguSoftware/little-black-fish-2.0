@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     rules: {
       "*.css": {
+        // CSS Modules must keep their module semantics: only plain .css goes through Tailwind.
+        condition: { not: { path: /\.module\.css$/ } },
         loaders: ["@tailwindcss/turbopack"],
         as: "*.css",
       },

@@ -103,3 +103,33 @@ export interface BuildOptions {
 }
 
 export type PuppetBuilder = (opts: BuildOptions) => Puppet | Promise<Puppet>;
+
+/**
+ * Per-frame inputs to the shared rig controller. Produced by the caller
+ * (series Hero/Cast, home EyesCTA, PuppetLab) from runtime.frame / pointer.
+ */
+export interface RigInputs {
+  /** Stage position (metres) and yaw (radians). */
+  x: number;
+  z: number;
+  rotY: number;
+  /** 0..1 walking amount and distance walked (metres) to phase the gait. */
+  walk: number;
+  stride: number;
+  /** World-space point the head should look toward; null = straight ahead. */
+  lookAt: import("three").Vector3 | null;
+  /** Pupil direction -1..1 in screen-ish space (x right, y up). */
+  pupils: { x: number; y: number };
+  /** 0..1 envelopes. */
+  surprise: number;
+  anger: number;
+  talking: number;
+  /** 0..1: raise the right hand and wave (HELLO). */
+  wave: number;
+  mood: MoodParams;
+  hero: boolean;
+  /** When true the controller holds pose (MotionToggle / reduced-motion idle). */
+  frozen: boolean;
+  quality: "high" | "low";
+  accent: readonly [number, number, number];
+}

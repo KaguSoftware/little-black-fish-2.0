@@ -97,7 +97,7 @@ export interface Teller {
   plates: Partial<Record<ChapterId, StillId>>;
   /** Portrait still + focal point for THE OTHERS / switcher chips (object-position %). */
   portrait: { still: StillId; focus: readonly [x: number, y: number] };
-  /** Optional GLB that replaces the procedural puppet (mapped by glbAdapter). */
+  /** Optional character GLB (from scripts/optimize-characters.mjs) that replaces the procedural puppet. */
   model?: string;
   /** Reserved for future voice-over. */
   voice?: string;
