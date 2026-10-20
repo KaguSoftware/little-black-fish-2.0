@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
+/* Fonts: Redaction (display, with degradation cuts) + Schibsted Grotesk (narration/UI). */
+@import "@fontsource/redaction/400.css";
+@import "@fontsource/redaction/400-italic.css";
+@import "@fontsource/redaction-10/400.css";
+@import "@fontsource/redaction-35/400.css";
+@import "@fontsource/redaction-70/400.css";
+@import "@fontsource/redaction-100/400.css";
+@import "@fontsource/schibsted-grotesk/400.css";
+@import "@fontsource/schibsted-grotesk/500.css";
+@import "@fontsource/schibsted-grotesk/600.css";
+
+/*
+ * Theatrical black. --hue is the current stage tint (pages/tellers update it).
+ * --accent is the current teller light (series page writes it every frame via JS).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --hue: 215;
+  --stage: oklch(0.12 0.014 var(--hue));
+  --stage-deep: oklch(0.08 0.01 var(--hue));
+  --stage-raised: oklch(0.17 0.016 var(--hue));
+  --ink: oklch(0.93 0.012 80);
+  --ink-dim: oklch(0.74 0.012 80);
+  --ink-mute: oklch(0.58 0.012 80);
+  --ink-faint: oklch(0.93 0.012 80 / 0.08);
+  --hairline: oklch(0.93 0.012 80 / 0.16);
+  --accent: oklch(0.7 0.1 210);
+
+  --teller-child: oklch(0.7 0.1 210);
+  --teller-elder: oklch(0.72 0.09 350);
+  --teller-snake-king: oklch(0.7 0.14 140);
+  --teller-silver-one: oklch(0.64 0.16 268);
+  --teller-masked-lady: oklch(0.8 0.13 80);
+  --teller-creature: oklch(0.62 0.18 28);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quart: cubic-bezier(0.5, 0, 0.75, 0);
+
+  --font-display: "Redaction", "Times New Roman", serif;
+  --font-display-10: "Redaction 10", var(--font-display);
+  --font-display-35: "Redaction 35", var(--font-display);
+  --font-display-70: "Redaction 70", var(--font-display);
+  --font-display-100: "Redaction 100", var(--font-display);
+  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --gutter: clamp(1rem, 3.2vw, 2.75rem);
+  --step--1: clamp(0.8125rem, 0.78rem + 0.15vw, 0.9375rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.6rem);
+  --step-2: clamp(1.6rem, 1.3rem + 1.6vw, 3.2rem); /* narration */
+  --step-3: clamp(2.4rem, 1.6rem + 4vw, 5.5rem);
+  --step-4: clamp(3.6rem, 2rem + 8vw, 11rem);
+  --step-5: clamp(5rem, 2rem + 15vw, 20rem); /* wordmarks */
+
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-stage: var(--stage);
+  --color-stage-deep: var(--stage-deep);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-mute: var(--ink-mute);
+  --color-accent: var(--accent);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--stage-deep);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--stage);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--stage-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.01em;
+}
+
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
