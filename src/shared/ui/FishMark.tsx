@@ -3,15 +3,15 @@
 import type { CSSProperties } from "react";
 
 interface FishMarkProps {
-  /** Rendered height in px (the glyph is 2:1). Default 22. */
+  /** Rendered height in px (the glyph is about 2:1). Default 22. */
   size?: number;
   /** Accessible name. Omit for a decorative mark (aria-hidden). */
   title?: string;
-  /** Gentle tail sway. Stops under reduced motion and when ambient motion is paused. */
+  /** Gentle tail sway and a glancing pupil. Stops under reduced motion and when ambient motion is paused. */
   animated?: boolean;
   /**
-   * Draw the fish as a near-black silhouette lit by this rim colour (a CSS colour).
-   * Without it the fish fills with currentColor.
+   * Draw the fish as a near-black silhouette outlined in this rim colour (a CSS colour).
+   * Without it the fish is a bare line drawing in currentColor.
    */
   rim?: string;
   className?: string;
@@ -19,39 +19,43 @@ interface FishMarkProps {
 }
 
 /**
- * The little black fish: one ink stroke of a body, flicked fins, and a long
- * trailing tail. Body fill is currentColor so it can sit in ink on the stage or
- * in black on a lit plate. The eye is a cut-out coloured by --fish-eye.
+ * The little black fish: an eye-shaped body holding an iris and pupil, its two
+ * lines crossing at the root of a triangular tail. One stroke weight throughout.
+ * Geometry is shared with the hero swimmer (FISH_*) so both draw the same fish.
  */
-const BODY =
-  "M2.2 16.6C3.6 11 9 6.8 17 6.8C27 6.8 34 11.2 41.2 14.6L42 17.4C34 22 27 26 17.6 25.6C9 25.2 3.4 22.2 2.2 16.6Z";
-const DORSAL = "M19 9.2C21 5 25.5 2.6 31 2.4C28.6 4.2 27.6 6.6 27.8 10.2Z";
-const PELVIC = "M22.6 23.6C23.8 26.4 26.4 28.2 29.6 28.4C28 26.8 27.4 25.2 27.6 22.8Z";
-const TAIL =
-  "M40 14.6C45 14.6 49.5 11.8 53 7.6C55.4 4.8 58 3.4 61.8 3C60 6.2 59.4 9.4 59.6 12.8C58.6 15.2 57.2 16.4 55 17C58.2 19.4 60 23 59.4 28.6C56.8 25.8 54 23.4 50 21.2C46 19 43 17.8 40 17.4Z";
+export const FISH_VIEW = { w: 92, h: 48 } as const;
+export const FISH_STROKE = 5.2;
+/** Nose, crossing (tail root) and tail edge along the axis y = 24. */
+export const FISH_NOSE = 3.6;
+export const FISH_ROOT = 63.1;
+export const FISH_TAIL = 87.7;
+export const FISH_EYE = { cx: 32.9, cy: 24, iris: 12.9, pupil: 6.6 } as const;
+export const FISH_BODY =
+  "M3.6 24C9.2 10 20.5 3.8 31 3.8C48 3.8 57.5 13 63.1 24C57.5 35 48 44.2 31 44.2C20.5 44.2 9.2 38 3.6 24Z";
+export const FISH_FIN = "M63.1 24L87.7 7.8V40.2Z";
 
 const CSS = `
-.lbf-fish-tail{transform-box:view-box;transform-origin:40px 16px}
-.lbf-fish-fin{transform-box:view-box;transform-origin:24px 9px}
+.lbf-fish-tail{transform-box:view-box;transform-origin:${FISH_ROOT}px 24px}
 .lbf-fish[data-animated="true"] .lbf-fish-tail{animation:lbf-tail 3.4s ease-in-out infinite}
-.lbf-fish[data-animated="true"] .lbf-fish-fin{animation:lbf-fin 3.4s ease-in-out infinite .4s}
-@keyframes lbf-tail{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(6deg)}}
-@keyframes lbf-fin{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(3deg)}}
+.lbf-fish[data-animated="true"] .lbf-fish-pupil{animation:lbf-glance 9s ease-in-out infinite}
+@keyframes lbf-tail{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes lbf-glance{0%,38%,100%{transform:translate(0,0)}44%,60%{transform:translate(-2.6px,-.6px)}66%,82%{transform:translate(2px,1px)}}
 html[data-motion="paused"] .lbf-fish .lbf-fish-tail,
-html[data-motion="paused"] .lbf-fish .lbf-fish-fin{animation:none}
+html[data-motion="paused"] .lbf-fish .lbf-fish-pupil{animation:none}
 @media (prefers-reduced-motion:reduce){
-.lbf-fish .lbf-fish-tail,.lbf-fish .lbf-fish-fin{animation:none!important}
+.lbf-fish .lbf-fish-tail,.lbf-fish .lbf-fish-pupil{animation:none!important}
 }
 `;
 
 export function FishMark({ size = 22, title, animated = false, rim, className, style }: FishMarkProps) {
-  const w = size * 2;
-  const lit = rim ? { fill: "var(--stage-deep)", stroke: rim, strokeWidth: 0.7, strokeLinejoin: "round" as const } : {};
+  const w = (size * FISH_VIEW.w) / FISH_VIEW.h;
+  const line = rim ?? "currentColor";
+  const fill = rim ? "var(--stage-deep)" : "none";
   return (
     <svg
       className={["lbf-fish", className].filter(Boolean).join(" ")}
       data-animated={animated ? "true" : "false"}
-      viewBox="0 0 64 32"
+      viewBox={`0 0 ${FISH_VIEW.w} ${FISH_VIEW.h}`}
       width={w}
       height={size}
       role={title ? "img" : undefined}
@@ -61,17 +65,14 @@ export function FishMark({ size = 22, title, animated = false, rim, className, s
       style={{ display: "block", overflow: "visible", ...style }}
     >
       <style>{CSS}</style>
-      <g fill="currentColor" {...lit}>
-        <g className="lbf-fish-fin">
-          <path d={DORSAL} />
-        </g>
-        <path d={PELVIC} />
-        <path d={BODY} />
+      <g fill={fill} stroke={line} strokeWidth={FISH_STROKE} strokeLinejoin="round" strokeLinecap="round">
         <g className="lbf-fish-tail">
-          <path d={TAIL} />
+          <path d={FISH_FIN} />
         </g>
+        <path d={FISH_BODY} />
+        <circle cx={FISH_EYE.cx} cy={FISH_EYE.cy} r={FISH_EYE.iris} fill="none" />
       </g>
-      <circle cx="9.2" cy="14.4" r="1.2" fill="var(--fish-eye, var(--stage, #1c1f26))" />
+      <circle className="lbf-fish-pupil" cx={FISH_EYE.cx} cy={FISH_EYE.cy} r={FISH_EYE.pupil} fill={line} />
     </svg>
   );
 }

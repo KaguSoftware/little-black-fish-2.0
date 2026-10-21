@@ -3,32 +3,68 @@
 import { useEffect, useRef } from "react";
 import { useUI } from "@/shared/state/store";
 import { clamp, noise1 } from "@/shared/lib/math";
+import { FISH_EYE, FISH_NOSE, FISH_ROOT, FISH_STROKE, FISH_TAIL } from "@/shared/ui/FishMark";
 import { lantern } from "./lantern";
 
 /**
- * The little black fish. A single pure-black silhouette that swims through the fog above
- * the lantern wall. Its body is a follow-the-leader spine with a travelling sine wave, so
- * the tail sways fluidly; the outline is rebuilt every frame as one smoothed SVG path.
+ * The little black fish: the studio mark (FishMark) swimming through the fog above the
+ * lantern wall. Underneath runs a follow-the-leader spine with a travelling sine wave; every
+ * frame the mark is laid along it as two rigid parts, the eye-shaped body and the tail
+ * hinged at the crossing, so it yaws and beats its tail without losing its drawn shape.
  *
  * Behaviour: it lurks at the rim of the light, drifts after it, and when the lantern
  * comes close it darts away. Reduced motion: it rests, curved, and does not move.
  */
 
 const N = 16; // spine points
-const MAX_POINTS = N * 2 + 1;
+const INK = "oklch(0.9 0.012 80)";
 
-/** Half-width profile along the body, 0 = nose, 1 = tail tip. */
-function profile(t: number): number {
-  if (t < 0.3) return Math.pow(Math.sin((t / 0.3) * Math.PI * 0.5), 0.62);
-  if (t < 0.72) {
-    const k = (t - 0.3) / 0.42;
-    return 1 - (1 - 0.15) * (0.5 - 0.5 * Math.cos(k * Math.PI));
+/**
+ * The mark's outlines, sampled once into (u, v) pairs: u = 0 at the nose, 1 at the tail edge;
+ * v is the lateral offset as a fraction of body length.
+ */
+const SPAN = FISH_TAIL - FISH_NOSE;
+type Pt = [number, number];
+
+function cubic(a: Pt, b: Pt, c: Pt, d: Pt, n: number, out: Pt[]) {
+  for (let i = 1; i <= n; i++) {
+    const t = i / n;
+    const m = 1 - t;
+    out.push([
+      m * m * m * a[0] + 3 * m * m * t * b[0] + 3 * m * t * t * c[0] + t * t * t * d[0],
+      m * m * m * a[1] + 3 * m * m * t * b[1] + 3 * m * t * t * c[1] + t * t * t * d[1],
+    ]);
   }
-  const k = (t - 0.72) / 0.28;
-  return 0.15 + 0.7 * Math.pow(k, 1.35);
 }
 
-const PROFILE = Array.from({ length: N }, (_, i) => profile(i / (N - 1)));
+function ring(r: number, n: number): Pt[] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    return [FISH_EYE.cx + Math.cos(a) * r, FISH_EYE.cy + Math.sin(a) * r] as Pt;
+  });
+}
+
+function toUV(pts: Pt[]): Float32Array {
+  const f = new Float32Array(pts.length * 2);
+  pts.forEach(([x, y], i) => {
+    f[i * 2] = (x - FISH_NOSE) / SPAN;
+    f[i * 2 + 1] = (y - 24) / SPAN;
+  });
+  return f;
+}
+
+// Mirrors FISH_BODY and FISH_FIN in FishMark.
+const BODY_UV = (() => {
+  const o: Pt[] = [[FISH_NOSE, 24]];
+  cubic([3.6, 24], [9.2, 10], [20.5, 3.8], [31, 3.8], 12, o);
+  cubic([31, 3.8], [48, 3.8], [57.5, 13], [FISH_ROOT, 24], 14, o);
+  cubic([FISH_ROOT, 24], [57.5, 35], [48, 44.2], [31, 44.2], 14, o);
+  cubic([31, 44.2], [20.5, 44.2], [9.2, 38], [3.6, 24], 11, o);
+  return toUV(o);
+})();
+const FIN_UV = toUV([[FISH_ROOT, 24], [FISH_TAIL, 7.8], [FISH_TAIL, 40.2]]);
+const IRIS_UV = toUV(ring(FISH_EYE.iris, 36));
+const PUPIL_UV = toUV(ring(FISH_EYE.pupil, 20));
 
 interface Sim {
   x: number;
@@ -45,8 +81,10 @@ interface Sim {
   ly: Float32Array;
   sx: Float32Array;
   sy: Float32Array;
-  px: Float32Array;
-  py: Float32Array;
+  /** Unit vector from the tail root to the nose (the body's heading), and the tail's swing. */
+  hx: number;
+  hy: number;
+  swing: number;
   placed: boolean;
 }
 
@@ -54,7 +92,7 @@ function makeSim(): Sim {
   return {
     x: 0, y: 0, vx: 0, vy: 0, heading: Math.PI, phase: 0, dartUntil: 0, seekOff: 0, born: 0,
     lx: new Float32Array(N), ly: new Float32Array(N), sx: new Float32Array(N), sy: new Float32Array(N),
-    px: new Float32Array(MAX_POINTS), py: new Float32Array(MAX_POINTS), placed: false,
+    hx: -1, hy: 0, swing: 0, placed: false,
   };
 }
 
@@ -65,57 +103,54 @@ function angleDelta(a: number, b: number) {
   return d;
 }
 
-/** Rebuild the silhouette. L = body length in px. Writes outline points into sim.px/py. */
-function outline(sim: Sim, L: number): number {
-  const hw = L * 0.115;
-  let n = 0;
-  // left side: nose -> tail
-  for (let i = 0; i < N; i++) {
-    const i0 = Math.max(0, i - 1);
-    const i1 = Math.min(N - 1, i + 1);
-    let tx = sim.sx[i0] - sim.sx[i1];
-    let ty = sim.sy[i0] - sim.sy[i1];
-    const l = Math.hypot(tx, ty) || 1;
-    tx /= l;
-    ty /= l;
-    // tangent points nose-ward (i0 is nearer the head); normal = perpendicular
-    const nx = -ty;
-    const ny = tx;
-    const w = hw * PROFILE[i];
-    sim.px[i] = sim.sx[i] + nx * w;
-    sim.py[i] = sim.sy[i] + ny * w;
-    if (i > 0) {
-      sim.px[2 * N - i] = sim.sx[i] - nx * w;
-      sim.py[2 * N - i] = sim.sy[i] - ny * w;
-    }
-    if (i === N - 1) {
-      // fork notch between the two tail tips, pulled toward the body
-      sim.px[N] = sim.sx[i] + tx * L * 0.06;
-      sim.py[N] = sim.sy[i] + ty * L * 0.06;
-    }
-  }
-  n = 2 * N;
-  return n;
+/** The tail root along the body, as u, and as the nearest spine point. */
+const ROOT_U = (FISH_ROOT - FISH_NOSE) / SPAN;
+const ROOT_I = Math.round(ROOT_U * (N - 1));
+const MAX_SWING = 0.6;
+
+/**
+ * Read the spine as the mark's two rigid parts: the eye-shaped body lies along nose -> root,
+ * and the tail hinges at the root, swung by however far the rear of the spine has turned.
+ */
+function frame(sim: Sim) {
+  const hx = sim.sx[0] - sim.sx[ROOT_I];
+  const hy = sim.sy[0] - sim.sy[ROOT_I];
+  const hl = Math.hypot(hx, hy) || 1;
+  sim.hx = hx / hl;
+  sim.hy = hy / hl;
+  const tx = sim.sx[ROOT_I] - sim.sx[N - 1];
+  const ty = sim.sy[ROOT_I] - sim.sy[N - 1];
+  sim.swing = clamp(Math.atan2(sim.hx * ty - sim.hy * tx, sim.hx * tx + sim.hy * ty), -MAX_SWING, MAX_SWING);
 }
 
-/** Closed, smoothed path through the outline points (midpoint quadratic smoothing). */
-function pathFrom(sim: Sim, n: number): string {
-  const p = (i: number) => (i + n) % n;
-  const mx = (a: number, b: number) => (sim.px[a] + sim.px[b]) / 2;
-  const my = (a: number, b: number) => (sim.py[a] + sim.py[b]) / 2;
-  let d = `M${mx(0, 1).toFixed(1)} ${my(0, 1).toFixed(1)}`;
-  for (let i = 1; i <= n; i++) {
-    const a = p(i);
-    const b = p(i + 1);
-    d += `Q${sim.px[a].toFixed(1)} ${sim.py[a].toFixed(1)} ${mx(a, b).toFixed(1)} ${my(a, b).toFixed(1)}`;
+/** Closed path through (u, v) points placed on the body, tail points swung about the root. */
+function lay(sim: Sim, uv: Float32Array, L: number): string {
+  const { hx, hy } = sim;
+  const rx = sim.sx[0] - hx * ROOT_U * L;
+  const ry = sim.sy[0] - hy * ROOT_U * L;
+  const c = Math.cos(sim.swing);
+  const sn = Math.sin(sim.swing);
+  let d = "";
+  for (let k = 0; k < uv.length; k += 2) {
+    const u = uv[k];
+    const v = uv[k + 1] * L;
+    let x = sim.sx[0] - hx * u * L - hy * v;
+    let y = sim.sy[0] - hy * u * L + hx * v;
+    if (u > ROOT_U) {
+      const dx = x - rx;
+      const dy = y - ry;
+      x = rx + dx * c - dy * sn;
+      y = ry + dx * sn + dy * c;
+    }
+    d += `${k ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
   }
   return d + "Z";
 }
 
 export function Fish({ active }: { active: boolean }) {
   const bodyRef = useRef<SVGPathElement>(null);
-  const eyeL = useRef<SVGCircleElement>(null);
-  const eyeR = useRef<SVGCircleElement>(null);
+  const irisRef = useRef<SVGPathElement>(null);
+  const pupilRef = useRef<SVGPathElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const sim = useRef<Sim>(makeSim());
   const reduced = useUI((s) => s.reducedMotion);
@@ -142,28 +177,17 @@ export function Fish({ active }: { active: boolean }) {
     };
 
     const draw = (L: number) => {
+      const svg = svgRef.current;
       const body = bodyRef.current;
-      if (!body) return;
-      const n = outline(s, L);
-      body.setAttribute("d", pathFrom(s, n));
-      // eyes sit on the head, one each side
-      const i = 2;
-      const i0 = 1;
-      const i1 = 3;
-      let tx = s.sx[i0] - s.sx[i1];
-      let ty = s.sy[i0] - s.sy[i1];
-      const l = Math.hypot(tx, ty) || 1;
-      tx /= l;
-      ty /= l;
-      const off = L * 0.115 * PROFILE[i] * 0.62;
-      const e1 = eyeL.current;
-      const e2 = eyeR.current;
-      if (e1 && e2) {
-        e1.setAttribute("cx", (s.sx[i] - ty * off).toFixed(1));
-        e1.setAttribute("cy", (s.sy[i] + tx * off).toFixed(1));
-        e2.setAttribute("cx", (s.sx[i] + ty * off).toFixed(1));
-        e2.setAttribute("cy", (s.sy[i] - tx * off).toFixed(1));
-      }
+      const iris = irisRef.current;
+      const pupil = pupilRef.current;
+      if (!svg || !body || !iris || !pupil) return;
+      frame(s);
+      body.setAttribute("d", lay(s, FIN_UV, L) + lay(s, BODY_UV, L));
+      iris.setAttribute("d", lay(s, IRIS_UV, L));
+      pupil.setAttribute("d", lay(s, PUPIL_UV, L));
+      const sw = ((FISH_STROKE * L) / SPAN).toFixed(2);
+      if (svg.style.strokeWidth !== sw) svg.style.strokeWidth = sw;
     };
 
     const place = (L: number, w: number, h: number) => {
@@ -189,7 +213,7 @@ export function Fish({ active }: { active: boolean }) {
       const w = lantern.w;
       const h = lantern.h;
       const minDim = Math.min(w, h);
-      const L = clamp(minDim * 0.14, 78, 160);
+      const L = clamp(minDim * 0.11, 64, 128);
       if (w <= 1) return;
       if (svg.getAttribute("viewBox") !== `0 0 ${w} ${h}`) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
       if (!s.placed) {
@@ -333,9 +357,11 @@ export function Fish({ active }: { active: boolean }) {
         overflow: "visible",
       }}
     >
-      <path ref={bodyRef} fill="oklch(0.045 0.008 250)" />
-      <circle ref={eyeL} r={1.7} fill="oklch(0.62 0.05 80)" opacity={0.7} />
-      <circle ref={eyeR} r={1.7} fill="oklch(0.62 0.05 80)" opacity={0.7} />
+      <g stroke={INK} strokeLinejoin="round" strokeLinecap="round">
+        <path ref={bodyRef} fill="oklch(0.045 0.008 250)" />
+        <path ref={irisRef} fill="none" />
+      </g>
+      <path ref={pupilRef} fill={INK} />
     </svg>
   );
 }

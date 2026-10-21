@@ -4,7 +4,7 @@
  * Run:  node scripts/optimize-characters.mjs [name ...]
  * (suggested package.json script: "assets:characters": "node scripts/optimize-characters.mjs")
  *
- * In : assets-src/character/3d-models/<name>.glb   (GLTFExporter output of the procedural generator)
+ * In : assets-src/character/3d-models/<name>.glb   (Blender exports: meshopt geometry, 2048 PBR maps)
  * Out: public/models/<name>.glb
  *
  * The exports are static statues: every mesh hangs off the root in world space, the mask / hair /
@@ -138,14 +138,16 @@ async function processCharacter(name) {
 
   // Label every mesh node with its own name or its nearest named ancestor's (anonymous fingers,
   // cuff tori and beads inherit from their group), before flatten() drops the hierarchy.
-  const topName = scene.listChildren()[0]?.getName();
+  // Blender suffixes duplicates ("Finger.003") and names unnamed objects "Node_29" / "Mesh_38".
+  const baseName = (n) => n.getName().replace(/\.\d+$/, "").replace(/^(Node|Mesh)_\d+$/, "");
+  const topName = baseName(scene.listChildren()[0]);
   const label = new Map();
   for (const node of root.listNodes()) {
     if (!node.getMesh()) continue;
     let n = node;
     let l = "";
     while (n) {
-      const nm = n.getName();
+      const nm = baseName(n);
       if (nm && nm !== topName) {
         l = nm;
         break;

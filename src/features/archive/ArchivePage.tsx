@@ -589,7 +589,7 @@ transition:opacity .45s var(--ease-out-quint)}
 .ar-role{grid-area:role;text-align:end}
 .ar-sub{grid-area:sub}
 
-.ar-title{grid-area:title;position:relative;display:inline-block;justify-self:start;
+.ar-title{grid-area:title;position:relative;display:inline-grid;grid-template-columns:minmax(0,auto);justify-self:start;
 font-size:calc((100vw - 2 * var(--gutter)) / 6.6);line-height:.98;letter-spacing:-.012em;
 max-width:calc(100% - .25em);text-wrap:balance;overflow-wrap:break-word;
 font-synthesis:none;transition:transform .6s var(--ease-out-quint)}
@@ -603,9 +603,11 @@ font-synthesis:none;transition:transform .6s var(--ease-out-quint)}
 }
 .ar-title[data-active="true"]{transform:translateX(.18em)}
 [dir="rtl"] .ar-title[data-active="true"]{transform:translateX(-.18em)}
-.ar-cut{display:block;text-shadow:0 0 28px oklch(0.08 0.01 215/.85)}
+/* Both cuts share one grid cell, so the title is as large as the wider face (Redaction 10
+   sets wider than 70): the healed cut can't wrap past the box into the next row. */
+.ar-cut{display:block;grid-area:1/1;min-width:0;text-shadow:0 0 28px oklch(0.08 0.01 215/.85)}
 .ar-cut-rest{font-family:var(--font-display-70);color:var(--ink-dim);transition:opacity .55s var(--ease-out-quint)}
-.ar-cut-heal{position:absolute;inset:0;font-family:var(--font-display-10);color:var(--ink);opacity:0;
+.ar-cut-heal{font-family:var(--font-display-10);color:var(--ink);opacity:0;
 transition:opacity .55s var(--ease-out-quint)}
 .ar-title[data-active="true"] .ar-cut-rest{opacity:0}
 .ar-title[data-active="true"] .ar-cut-heal{opacity:1}

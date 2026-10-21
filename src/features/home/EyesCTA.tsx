@@ -16,10 +16,10 @@ import s from "./home.module.css";
 const EyesScene = dynamic(() => import("./EyesScene"), { ssr: false });
 
 const SERIES_HREF = "/projects/series";
-const CHILD_RIM = oklchCss(TELLER_BY_ID.child.accent);
+const RIM = oklchCss(TELLER_BY_ID["snake-king"].accent);
 
 /**
- * The CTA. The screen goes to black; the Child's paper mask fades up out of the dark, lit
+ * The CTA. The screen goes to black; the Snake King's mask fades up out of the dark, lit
  * only around the eyes. The pupils follow the cursor, lids lift as you come near, six
  * accent dots circle the eyes. Clicking the eyes or "Look closer" closes the page transition
  * iris INTO the left pupil, and the series opens on the same eyes.
@@ -39,7 +39,7 @@ export function EyesCTA() {
   const pupil = useRef<PupilPoint>({ x: 0, y: 0, valid: false });
 
   // Build the puppet only once the section is within a screen of the viewport.
-  const puppet = useTellerPuppet(near ? "child" : null);
+  const puppet = useTellerPuppet(near ? "snake-king" : null);
 
   useEffect(() => {
     const el = ref.current;
@@ -81,7 +81,7 @@ export function EyesCTA() {
       : e
         ? { x: e.clientX, y: e.clientY }
         : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    navigateWithIris(SERIES_HREF, origin, { rim: CHILD_RIM, waitForReady: true });
+    navigateWithIris(SERIES_HREF, origin, { rim: RIM, waitForReady: true });
   }, []);
 
   const sceneLive = !!puppet && usable;

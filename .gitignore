@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# source model drops (extracted into assets-src/character/3d-models)
+assets-src/character/*.zip

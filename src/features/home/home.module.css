@@ -498,7 +498,7 @@ html[data-motion="paused"] .holdRing::after {
   position: absolute;
   inset: 0;
   height: 1px;
-  background: var(--teller-child);
+  background: var(--teller-snake-king);
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 0.8s var(--ease-out-quint);

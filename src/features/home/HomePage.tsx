@@ -16,7 +16,7 @@ const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 /**
  * Home: Lantern.
  *   Hero (lantern wall + wordmark that heals + the little black fish)
- *   EyesCTA ("Look closer", the iris closes into the Child's pupil)
+ *   EyesCTA ("Look closer", the iris closes into the Snake King's pupil)
  *   ReelStrip (projector gate)
  *   OtherWork (three asymmetric teasers)
  *   Footer (the name, clean; email to copy)

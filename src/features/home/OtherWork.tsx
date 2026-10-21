@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useInView, useScroll, useTransform } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRef } from "react";
 import { getPathname } from "@/i18n/navigation";
@@ -28,6 +28,9 @@ function Teaser({ card, size, index }: { card: ProjectCard; size: (typeof SIZES)
   const reduced = useUI((st) => st.reducedMotion);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const drift = useTransform(scrollYProgress, [0, 1], reduced ? ["0%", "0%"] : ["-7%", "7%"]);
+  // Watch the link, not the plate: the plate starts fully clipped, and IntersectionObserver
+  // honours clip-path, so the plate itself would never count as in view.
+  const shown = useInView(ref, { once: true, amount: 0.2 });
   const sizes = size === "large" ? "(max-width: 800px) 100vw, 62vw" : "(max-width: 800px) 80vw, 36vw";
 
   const onMove = (e: React.PointerEvent<HTMLElement>) => {
@@ -47,8 +50,7 @@ function Teaser({ card, size, index }: { card: ProjectCard; size: (typeof SIZES)
       <motion.div
         className={s.teaserPlate}
         initial={reduced ? { opacity: 0 } : { clipPath: "inset(0 0 100% 0)" }}
-        whileInView={reduced ? { opacity: 1 } : { clipPath: "inset(0 0 0% 0)" }}
-        viewport={{ once: true, amount: 0.2 }}
+        animate={shown ? (reduced ? { opacity: 1 } : { clipPath: "inset(0 0 0% 0)" }) : undefined}
         transition={{ duration: reduced ? 0.4 : 1.15, ease: EASE, delay: index * 0.05 }}
         onPointerMove={onMove}
       >

@@ -10,7 +10,7 @@ import type { PupilPoint } from "./EyesScene";
 import s from "./home.module.css";
 
 /**
- * 2D stand-in for the Child's eyes: shown while the 3D puppet loads, or if it cannot be
+ * 2D stand-in for the Snake King's eyes: shown while the 3D puppet loads, or if it cannot be
  * framed. Two glinting eyes behind slits in a barely-lit plate; pupils follow the cursor,
  * lids blink and lift when the cursor comes near, six accent dots orbit in a tilted ring.
  */

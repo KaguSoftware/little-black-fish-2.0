@@ -30,7 +30,7 @@ export interface PupilPoint {
   valid: boolean;
 }
 
-const CHILD_ACCENT = oklchToLinear(TELLER_BY_ID.child.accent);
+const ACCENT = oklchToLinear(TELLER_BY_ID["snake-king"].accent);
 const RING_TILT = 1.02;
 const RING_ROLL = -0.34;
 
@@ -98,13 +98,13 @@ function makeInputs(): RigInputs {
     hero: true,
     frozen: false,
     quality: "high",
-    accent: CHILD_ACCENT,
+    accent: ACCENT,
   };
 }
 
 function makeRigObjects(): RigObjects {
   const spot = new SpotLight(new Color(1.0, 0.92, 0.8), 0, 0, 0.3, 1, 2);
-  const rim = new PointLight(new Color(CHILD_ACCENT[0], CHILD_ACCENT[1], CHILD_ACCENT[2]), 0, 0, 2);
+  const rim = new PointLight(new Color(ACCENT[0], ACCENT[1], ACCENT[2]), 0, 0, 2);
   const g = new BufferGeometry();
   g.setAttribute("position", new BufferAttribute(new Float32Array(TELLERS.length * 3), 3));
   const col = new Float32Array(TELLERS.length * 3);
