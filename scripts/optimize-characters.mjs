@@ -5,7 +5,7 @@
  * (suggested package.json script: "assets:characters": "node scripts/optimize-characters.mjs")
  *
  * In : assets-src/character/3d-models/<name>.glb   (Blender exports: meshopt geometry, 2048 PBR maps)
- * Out: public/models/<name>.glb
+ * Out: public/models/<name>.glb   (then bump MODELS_REV in src/shared/content/characters.ts)
  *
  * The exports are static statues: every mesh hangs off the root in world space, the mask / hair /
  * crown are siblings of `Head`, and left/right parts share names. This script bakes every mesh into

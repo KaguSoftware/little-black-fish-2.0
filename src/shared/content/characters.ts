@@ -12,6 +12,13 @@ import { CHAPTER_BY_ID } from "./chapters";
 export const HELLO = (name: string) => `Oh. Hi. I'm ${name}.`;
 export const MAKER = "Little Black Fish made me. Here's what else they made.";
 
+/**
+ * Bump when public/models/*.glb are regenerated: loaded scenes are cached by URL (in memory and
+ * by the browser), so a new query string is what makes open tabs and returning visitors refetch.
+ */
+const MODELS_REV = "2";
+const modelUrl = (name: string) => `/models/${name}.glb?v=${MODELS_REV}`;
+
 export const TELLERS: readonly Teller[] = [
   {
     id: "child",
@@ -34,7 +41,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s10", day: "s13", did: "s07", others: "s09" },
     portrait: { still: "s09", focus: [50, 30] },
-    model: "/models/siyamak.glb",
+    model: modelUrl("siyamak"),
   },
   {
     id: "elder",
@@ -57,7 +64,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s14", day: "s06", did: "s07", others: "s08" },
     portrait: { still: "s08", focus: [93, 35] },
-    model: "/models/keyumars.glb",
+    model: modelUrl("keyumars"),
   },
   {
     id: "snake-king",
@@ -80,7 +87,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s03", day: "s20", did: "s19", others: "s24" },
     portrait: { still: "s05", focus: [0, 40] },
-    model: "/models/zahhak.glb",
+    model: modelUrl("zahhak"),
   },
   {
     id: "silver-one",
@@ -104,7 +111,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s17", day: "s16", did: "s21", others: "s15" },
     portrait: { still: "s22", focus: [0, 30] },
-    model: "/models/eblis.glb",
+    model: modelUrl("eblis"),
   },
   {
     id: "masked-lady",
@@ -127,7 +134,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s12", day: "s27", did: "s17", others: "s12" },
     portrait: { still: "s26", focus: [0, 35] },
-    model: "/models/arnavaz.glb",
+    model: modelUrl("arnavaz"),
   },
   {
     id: "creature",
@@ -150,7 +157,7 @@ export const TELLERS: readonly Teller[] = [
     },
     plates: { world: "s12", day: "s20", did: "s07", others: "s23" },
     portrait: { still: "s23", focus: [3, 50] },
-    model: "/models/horse.glb",
+    model: modelUrl("horse"),
   },
 ];
 
