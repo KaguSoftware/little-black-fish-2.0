@@ -29,7 +29,7 @@ import { HERO_VIDEOS } from "@/shared/data/hero";
 import { useUI } from "@/shared/state/store";
 import { AdaptiveDpr } from "@/shared/lib/AdaptiveDpr";
 import { oklchToLinear } from "@/shared/lib/color";
-import { easeOutQuint, hash1 } from "@/shared/lib/math";
+import { clamp, easeOutQuint, hash1 } from "@/shared/lib/math";
 import { lantern } from "./lantern";
 
 /**
@@ -45,9 +45,44 @@ const DEPTHS = [4.4, 5.8, 7.3, 9, 10.8, 12.8];
 
 /** Ordered for variety (neighbouring plates are different tellers) and for first impressions. */
 const WALL_ORDER: StillId[] = [
-  "s09", "s04", "s16", "s12", "s08", "s02", "s15", "s13", "s20",
-  "s18", "s06", "s19", "s27", "s01", "s17", "s24", "s10", "s21",
+  "s09", "s04", "s16", "s12", "s08", "s02", "s15", "s13", "s25",
+  "s18", "s06", "s19", "s27", "s01", "s17", "s24", "s07", "s21",
 ];
+
+/**
+ * Where the character stands in each wide still, so the tall crop holds the figure and not
+ * the landscape around it. x, y: centre of the figure (fractions of width/height from the
+ * top-left). zoom > 1 tightens the crop on figures that sit small in the frame. The crop
+ * pans only a little around x.
+ */
+interface Framing {
+  x: number;
+  y?: number;
+  zoom?: number;
+}
+const FRAMING: Partial<Record<StillId, Framing>> = {
+  s01: { x: 0.52 },
+  s02: { x: 0.5 },
+  s04: { x: 0.78 },
+  s06: { x: 0.62 },
+  s07: { x: 0.5, y: 0.68, zoom: 1.4 },
+  s08: { x: 0.69 },
+  s09: { x: 0.5 },
+  s12: { x: 0.5 },
+  s13: { x: 0.5 },
+  s15: { x: 0.45 },
+  s16: { x: 0.71 },
+  s17: { x: 0.48 },
+  s18: { x: 0.53 },
+  s19: { x: 0.52 },
+  s21: { x: 0.5, y: 0.66, zoom: 1.35 },
+  s24: { x: 0.5 },
+  s25: { x: 0.55 },
+};
+/** Films (and any still without an entry) keep the centred crop. */
+const CENTRED: Framing = { x: 0.5 };
+/** Pan amplitude around the focal point, as a fraction of the image width. */
+const PAN = 0.035;
 
 /**
  * High tier only: two plates play the hero films through the same halftone path. Keyed by
@@ -305,6 +340,7 @@ function stepPlate(
   dt: number,
   lift: number,
   rect: PlateRect,
+  frame: Framing,
 ) {
   const aspect = size.width / size.height;
   const visH = 2 * spec.depth * Math.tan((cam.fov * Math.PI) / 360);
@@ -330,11 +366,11 @@ function stepPlate(
   rect.ok = reveal.v > 0.5 && tmpV.z < 1;
   material.uniforms.uFocus.value = lift;
 
-  // Slow pan across the wide still behind the tall crop.
+  // Slow pan behind the tall crop, kept around the figure.
   const crop = material.uniforms.uCrop.value as Vector4;
-  const cw = Math.min(1, PLATE_ASPECT / imgAspect);
-  const focus = 0.5 + 0.4 * Math.sin(t * 0.045 + spec.seed * 2.0);
-  crop.x = (1 - cw) * focus;
+  const cw = Math.min(1, PLATE_ASPECT / imgAspect) / (frame.zoom ?? 1);
+  const cx = frame.x + PAN * Math.sin(t * 0.045 + spec.seed * 2.0);
+  crop.x = clamp(cx - cw / 2, 0, 1 - cw);
 
   material.uniforms.uCell.value = (3.2 + 17 / spec.depth) * dpr;
 
@@ -344,11 +380,14 @@ function stepPlate(
   }
 }
 
-/** Fit a tall crop of a texture with aspect `a` (centred vertically; stepPlate pans x). */
-function fitCrop(material: ShaderMaterial, a: number) {
-  const cw = Math.min(1, PLATE_ASPECT / a);
-  const ch = Math.min(1, a / PLATE_ASPECT);
-  material.uniforms.uCrop.value.set(0, (1 - ch) * 0.5, cw, ch);
+/** Fit a tall crop of a texture with aspect `a` (y from the framing; stepPlate pans x). */
+function fitCrop(material: ShaderMaterial, a: number, frame: Framing = CENTRED) {
+  const z = frame.zoom ?? 1;
+  const cw = Math.min(1, PLATE_ASPECT / a) / z;
+  const ch = Math.min(1, a / PLATE_ASPECT) / z;
+  // Texture v runs bottom-up; framing y is measured from the top.
+  const y = clamp(1 - (frame.y ?? 0.5) - ch / 2, 0, 1 - ch);
+  material.uniforms.uCrop.value.set(0, y, cw, ch);
 }
 
 /** One plate's film: an offscreen <video> + VideoTexture, shown only while it really plays. */
@@ -433,7 +472,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
             still.current = { tex, aspect: img.width / img.height };
             if (!video.current?.shown) {
               aspectRef.current = still.current.aspect;
-              fitCrop(material, aspectRef.current);
+              fitCrop(material, aspectRef.current, FRAMING[spec.id]);
               material.uniforms.uTex.value = tex;
             }
             reveal.current.target = 1;
@@ -463,7 +502,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
       v.shown = false;
       if (still.current.tex) {
         aspectRef.current = still.current.aspect;
-        fitCrop(material, aspectRef.current);
+        fitCrop(material, aspectRef.current, FRAMING[spec.id]);
         material.uniforms.uTex.value = still.current.tex;
       } else {
         material.uniforms.uTex.value = null;
@@ -565,7 +604,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
     else lift.current += (want - lift.current) * (1 - Math.exp(-(want > lift.current ? 7 : 3.5) * dt));
     if (mesh) {
       mesh.renderOrder = want ? 3 : lift.current > 0.02 ? 2 : 0;
-      stepPlate(mesh, material, spec, shared, reveal.current, aspectRef.current, state.camera as PerspectiveCamera, state.size, state.viewport.dpr, dt, lift.current, focus.rects[order]);
+      stepPlate(mesh, material, spec, shared, reveal.current, aspectRef.current, state.camera as PerspectiveCamera, state.size, state.viewport.dpr, dt, lift.current, focus.rects[order], video.current?.shown ? CENTRED : (FRAMING[spec.id] ?? CENTRED));
     }
     const v = video.current;
     if (v?.el) syncVideo(v, activeRef.current && motionOn.current);

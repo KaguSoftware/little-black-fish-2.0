@@ -8,7 +8,7 @@ import { useSeries, useUI } from "@/shared/state/store";
 /**
  * Runs FIRST every frame (priority -100; negative priorities don't take over
  * rendering in R3F). Computes runtime.frame from progress + teller weights, and
- * pushes discrete changes (chapter, nav visibility) to React state.
+ * pushes discrete changes (chapter) to React state.
  */
 export function SeriesDirector() {
   const css = useRef({ accent: "", stage: "" });
@@ -25,8 +25,6 @@ export function SeriesDirector() {
       lowTier: ui.quality === "low",
     });
     s.setChapter(f.r.chapter);
-    const hideNav = f.r.chapterIndex < 5;
-    if (ui.navHidden !== hideNav) ui.setNavHidden(hideNav);
     // Expose the blended accent + stage to CSS for DOM overlays.
     // Only on change: these sit on :root, so every write restyles the whole document.
     const root = document.documentElement.style;

@@ -19,25 +19,20 @@ interface UIState {
   /** Ambient motion paused by the user (MotionToggle). */
   paused: boolean;
   quality: Quality;
-  /** Nav visibility (the series page hides it until THE OTHERS). */
-  navHidden: boolean;
   setReducedMotion: (v: boolean) => void;
   setPaused: (v: boolean) => void;
   togglePaused: () => void;
   setQuality: (q: Quality) => void;
-  setNavHidden: (v: boolean) => void;
 }
 
 export const useUI = create<UIState>((set) => ({
   reducedMotion: false,
   paused: false,
   quality: "high",
-  navHidden: false,
   setReducedMotion: (reducedMotion) => set({ reducedMotion }),
   setPaused: (paused) => set({ paused }),
   togglePaused: () => set((s) => ({ paused: !s.paused })),
   setQuality: (quality) => set({ quality }),
-  setNavHidden: (navHidden) => set({ navHidden }),
 }));
 
 // ── Series ─────────────────────────────────────────────────────────────────

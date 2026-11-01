@@ -8,6 +8,7 @@ import type { TellerId } from "@/shared/content/types";
 import { useSeries, useUI } from "@/shared/state/store";
 import { listVariants, tellerAccentCss } from "./lib/enter";
 import { scrollToTop } from "./lib/lenis";
+import { tellerName } from "./lib/i18n";
 
 /* One-line mood descriptors live in series.json "moods" (placeholder voice notes; replace with the studio's). */
 
@@ -54,6 +55,7 @@ export function CastList() {
             const now = t.id === teller;
             const accent = tellerAccentCss(t.accent);
             const role = tr(`roles.${t.id}`);
+            const name = tellerName(tr, t.id, t.name);
             return (
               <motion.li key={t.id} variants={v.item} className={i % 2 === 1 ? "translate-y-5 md:translate-y-7" : ""}>
                 <button
@@ -71,7 +73,7 @@ export function CastList() {
                   onBlur={() => useSeries.getState().setHoverTeller(null)}
                   aria-current={now ? "true" : undefined}
                   aria-label={
-                    now ? tr("tellingNowLabel", { name: t.name, role }) : tr("hearFrom", { name: t.name, role })
+                    now ? tr("tellingNowLabel", { name, role }) : tr("hearFrom", { name, role })
                   }
                   className="group pointer-events-auto flex w-full items-center gap-3 rounded-md p-1 text-start active:scale-[0.98] md:gap-4"
                 >
@@ -103,7 +105,7 @@ export function CastList() {
                   </span>
                   <span className="min-w-0" style={{ textShadow: "0 0 16px oklch(0.06 0.01 var(--hue) / 0.95)" }}>
                     <span className="display block text-[length:var(--step-1)]" style={{ color: "var(--ink)" }}>
-                      {t.name}
+                      {name}
                     </span>
                     <span className="block text-[0.8rem] leading-snug" style={{ color: "var(--ink-dim)" }}>
                       {role}

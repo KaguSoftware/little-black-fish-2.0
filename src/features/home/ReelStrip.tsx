@@ -9,6 +9,7 @@ import type { StillId } from "@/shared/content/types";
 import { oklchCss } from "@/shared/lib/color";
 import { clamp, damp, hash1, smoothstep, smootherstep } from "@/shared/lib/math";
 import { useUI } from "@/shared/state/store";
+import { tellerName } from "@/features/series/ui/lib/i18n";
 import s from "./home.module.css";
 
 /** One frame per teller voice. */
@@ -44,6 +45,7 @@ export function ReelStrip() {
   const reduced = useUI((st) => st.reducedMotion);
   const paused = useUI((st) => st.paused);
   const t = useTranslations("home.reel");
+  const ts = useTranslations("series");
   const locale = useLocale();
   const calm = reduced;
   const flags = useRef({ calm, paused });
@@ -247,7 +249,7 @@ export function ReelStrip() {
                 <img src={tellerPortrait(teller.id)} alt="" width={40} height={53} loading="lazy" decoding="async" />
               </span>
               <span className={s.reelName}>
-                {t("caption", { name: teller.name, role: teller.role })}
+                {t("caption", { name: tellerName(ts, teller.id, teller.name), role: ts(`roles.${teller.id}`) })}
               </span>
               <span className={s.reelCount} aria-hidden>
                 {pad2(index + 1, locale)} / {pad2(REEL_COUNT, locale)}

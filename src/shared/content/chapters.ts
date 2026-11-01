@@ -46,7 +46,8 @@ export interface Segment {
 }
 
 export const SEGMENTS: readonly Segment[] = [
-  { kind: "hold", chapter: "look", weight: 1.0 },
+  // Short: the first scroll should already start the pullback.
+  { kind: "hold", chapter: "look", weight: 0.2 },
   { kind: "pullback", chapter: "hello", from: "look", weight: 0.7 },
   { kind: "hold", chapter: "hello", weight: 1.1 },
   { kind: "dive", chapter: "world", from: "hello", weight: 1.0 },

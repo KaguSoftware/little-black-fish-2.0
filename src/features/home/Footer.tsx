@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useInView } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SITE } from "@/shared/content/site";
@@ -65,6 +65,10 @@ export function Footer() {
   const t = useTranslations("footer");
   const locale = useLocale();
   const year = Number(SITE.year).toLocaleString(locale === "fa" ? "fa-IR" : "en-US", { useGrouping: false });
+  // Watch the heading, not the lines: each line starts pushed down inside its clipping
+  // mask, so a line on its own can never be "60% in view" and would stay hidden.
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const nameShown = useInView(nameRef, { once: true, amount: 0.25 });
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -78,14 +82,13 @@ export function Footer() {
 
   return (
     <footer className={s.footer}>
-      <h2 className={s.footName} aria-label={t("name")}>
+      <h2 ref={nameRef} className={s.footName} aria-label={t("name")}>
         {LINES.map((l, i) => (
           <span key={l} className={s.footLine} aria-hidden>
             <motion.span
               className={s.footLineInner}
               initial={reduced ? { opacity: 0 } : { y: "55%", opacity: 0, filter: "blur(6px)" }}
-              whileInView={reduced ? { opacity: 1 } : { y: "0%", opacity: 1, filter: "blur(0px)" }}
-              viewport={{ once: true, amount: 0.6 }}
+              animate={nameShown ? (reduced ? { opacity: 1 } : { y: "0%", opacity: 1, filter: "blur(0px)" }) : undefined}
               transition={{ duration: 1.1, ease: EASE, delay: i * 0.12 }}
             >
               {l}

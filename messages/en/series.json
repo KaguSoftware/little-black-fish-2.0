@@ -7,20 +7,41 @@
   "watch": "Watch the series",
   "chapterLabel": "{number} · {title}",
   "chapters": {
-    "look": { "word": "LOOK CLOSER", "title": "Look closer" },
-    "hello": { "word": "HELLO", "title": "Hello" },
-    "world": { "word": "MY WORLD", "title": "My world" },
-    "day": { "word": "THE DAY", "title": "The day" },
-    "did": { "word": "WHAT I DID", "title": "What I did" },
-    "others": { "word": "THE OTHERS", "title": "The others" },
-    "maker": { "word": "MY MAKER", "title": "My maker" }
+    "look": {
+      "word": "LOOK CLOSER",
+      "title": "Look closer"
+    },
+    "hello": {
+      "word": "HELLO",
+      "title": "Hello"
+    },
+    "world": {
+      "word": "MY WORLD",
+      "title": "My world"
+    },
+    "day": {
+      "word": "THE DAY",
+      "title": "The day"
+    },
+    "did": {
+      "word": "WHAT I DID",
+      "title": "What I did"
+    },
+    "others": {
+      "word": "THE OTHERS",
+      "title": "The others"
+    },
+    "maker": {
+      "word": "MY MAKER",
+      "title": "My maker"
+    }
   },
   "roles": {
-    "child": "the Child",
-    "elder": "the Elder",
-    "snake-king": "the Snake King",
-    "silver-one": "the Silver One",
-    "masked-lady": "the Masked Lady",
+    "child": "son of Kiumars",
+    "elder": "the first king",
+    "snake-king": "the dragon-shouldered king",
+    "silver-one": "foe of glory and justice",
+    "masked-lady": "daughter of Jamshid",
     "creature": "the Creature"
   },
   "moods": {

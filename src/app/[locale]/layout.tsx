@@ -9,6 +9,7 @@ import { Nav } from "@/shared/ui/Nav";
 import { Grain } from "@/shared/ui/Grain";
 import { MotionToggle } from "@/shared/ui/MotionToggle";
 import { IrisTransition } from "@/shared/transition/IrisTransition";
+import { LowResFilters } from "@/shared/ui/LowResFilters";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://littleblackfishstudios.com";
 
@@ -55,6 +56,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             <IrisTransition />
           </Providers>
         </NextIntlClientProvider>
+        <LowResFilters />
       </body>
     </html>
   );

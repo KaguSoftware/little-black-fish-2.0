@@ -27,6 +27,10 @@ export const HERO_H = 1.8;
 const BLEND_K = 5.1;
 /** Yaw (radians) the hero turns toward the next mark while walking: a three-quarter profile. */
 const WALK_TURN = 1.15;
+/** LOOK CLOSER framing: camera distance from the eyes (m, times the teller's eyeline), fov, and how far below the eyes it aims (m). */
+const LOOK_DISTANCE = 1.05;
+const LOOK_FOV = 28;
+const LOOK_DROP = 0.05;
 /** Dive: fraction of the dive segment spent approaching the eye (the rest is the iris opening). */
 export const DIVE_SPLIT = 0.55;
 
@@ -67,12 +71,14 @@ function framing(t: Teller, chapter: ChapterId, heroX: number, out: Cam): Cam {
   const eye = t.eyeline;
   const ov = t.framing?.[chapter] ?? {};
   if (chapter === "look") {
-    // Extreme close-up: the eyes fill the screen.
+    // Close-up on the face: near enough that the eyes lead, far enough that the whole head
+    // reads (any tighter and the low-poly mask facets fill the screen).
     _eyesMid.copy(runtime.hero.eyeL).add(runtime.hero.eyeR).multiplyScalar(0.5);
     _eyesMid.x += heroX - runtime.frame.hero.x; // anchors follow the hero; correct if hero moved
     out.target.copy(_eyesMid);
-    out.pos.set(_eyesMid.x, _eyesMid.y + eye.height * 0.05, _eyesMid.z + 0.55 * eye.distance);
-    out.fov = 26;
+    out.target.y -= LOOK_DROP;
+    out.pos.set(_eyesMid.x, _eyesMid.y + eye.height * 0.05, _eyesMid.z + LOOK_DISTANCE * eye.distance);
+    out.fov = LOOK_FOV;
     out.roll = eye.roll * 0.5;
     return out;
   }

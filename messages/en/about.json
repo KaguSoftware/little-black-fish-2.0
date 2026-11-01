@@ -28,5 +28,9 @@
       ]
     }
   ],
+  "team": {
+    "heading": "The team",
+    "instagram": "{name} on Instagram"
+  },
   "fine": "Little Black Fish Studios, Tehran"
 }

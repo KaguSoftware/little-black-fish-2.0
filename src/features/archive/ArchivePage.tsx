@@ -511,7 +511,7 @@ export function ArchivePage({
                       titleEls.current[i] = el;
                     }}
                   >
-                    <span className="ar-cut ar-cut-rest">{p.title}</span>
+                    <span className="ar-cut ar-cut-rest lowres">{p.title}</span>
                     <span className="ar-cut ar-cut-heal" aria-hidden="true">
                       {p.title}
                     </span>

@@ -10,7 +10,7 @@ import { clamp, damp, hash1, invLerp, smoothstep } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
 import { useSeries, useUI } from "@/shared/state/store";
 import { enterMotion } from "./lib/enter";
-import { hasArabicScript } from "./lib/i18n";
+import { hasArabicScript, tellerName } from "./lib/i18n";
 
 const RETYPE_MS = 600;
 const EXIT_MS = 200;
@@ -53,14 +53,19 @@ export function Narration() {
   }
 
   const t = TELLER_BY_ID[cur.teller];
+  const name = tellerName(tr, t.id, t.name);
   const raw = t.narration[cur.chapter];
-  // The shared HELLO / MAKER templates are localized; every other line is the teller's own copy.
+  const own = `lines.${t.id}.${cur.chapter}`;
+  // The shared HELLO / MAKER templates are localized; a teller's own line comes from messages
+  // "lines" when the locale has it (Persian), else the English source.
   const text =
     cur.chapter === "hello" && raw === HELLO(t.name)
-      ? tr("narration.hello", { name: t.name })
+      ? tr("narration.hello", { name })
       : cur.chapter === "maker" && raw === MAKER
         ? tr("narration.maker")
-        : raw;
+        : tr.has(own)
+          ? tr(own)
+          : raw;
   const retype = cur.retype && !rm;
   const m = enterMotion(rm, retype ? EXIT_MS / 1000 : 0);
 
@@ -78,7 +83,7 @@ export function Narration() {
             exit={m.exit}
           >
             <Line
-              tellerLabel={tr("tellerLabel", { name: t.name, role: tr(`roles.${t.id}`) })}
+              tellerLabel={tr("tellerLabel", { name, role: tr(`roles.${t.id}`) })}
               chapter={cur.chapter}
               text={text}
               retypeDelayMs={retype ? EXIT_MS : 0}
@@ -117,6 +122,9 @@ function Line({
   }, [present]);
 
   const rtl = hasArabicScript(text);
+  // The monologue lines run to a couple of sentences: set those smaller and wider so they
+  // stay a compact block instead of a column of three-word lines.
+  const long = Array.from(text).length > 90;
 
   // Words of units; `i` is the index of the unit's first character in the full string (spaces
   // count), `len` how many characters it covers. Latin text: one unit per letter. Persian: one
@@ -359,9 +367,9 @@ function Line({
       className="relative"
       style={{
         fontFamily: "var(--font-sans)",
-        fontSize: "var(--step-2)",
-        maxWidth: "min(22ch, 100%)",
-        width: "22ch",
+        fontSize: long ? "var(--step-1)" : "var(--step-2)",
+        maxWidth: long ? "min(34ch, 100%)" : "min(22ch, 100%)",
+        width: long ? "34ch" : "22ch",
       }}
     >
       <div
@@ -386,7 +394,7 @@ function Line({
         className="relative"
         style={{
           fontWeight: 500,
-          lineHeight: 1.18,
+          lineHeight: long ? (rtl ? 1.75 : 1.32) : 1.18,
           // Tracking would pull joined Persian letters apart.
           letterSpacing: rtl ? 0 : "-0.005em",
           color: "var(--ink)",

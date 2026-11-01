@@ -4,7 +4,6 @@ import type { MouseEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { useUI } from "../state/store";
 import { navigateWithIris } from "../transition/navigate";
 import { FishMark } from "./FishMark";
 
@@ -29,11 +28,9 @@ export function irisLinkClick(
 
 const CSS = `
 .lbf-nav{position:fixed;inset:0 0 auto 0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:1rem;
-padding:clamp(.75rem,2vh,1.25rem) var(--gutter);pointer-events:none;
-transition:opacity .45s var(--ease-out-quint),transform .45s var(--ease-out-quint)}
+padding:clamp(.75rem,2vh,1.25rem) var(--gutter);pointer-events:none}
 .lbf-nav::before{content:"";position:absolute;inset:0 0 -2.5rem 0;z-index:-1;pointer-events:none;
 background:linear-gradient(to bottom,oklch(0.08 0.01 215/.72),oklch(0.08 0.01 215/0))}
-.lbf-nav[data-hidden="true"]{opacity:0;transform:translateY(-10px);pointer-events:none}
 .lbf-nav a{pointer-events:auto}
 .lbf-nav-brand{display:inline-flex;align-items:center;gap:.6rem;color:var(--ink);text-decoration:none;padding:.25rem 0;
 font-family:var(--font-display);font-size:clamp(1.15rem,1rem + .5vw,1.5rem);line-height:1;letter-spacing:-.005em;white-space:nowrap}
@@ -52,7 +49,6 @@ transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease-o
 .lbf-nav-list{gap:.85rem}
 }
 @media (prefers-reduced-motion:reduce){
-.lbf-nav[data-hidden="true"]{transform:none}
 .lbf-nav-link::after{transition:none}
 }
 `;
@@ -63,10 +59,6 @@ export function Nav() {
   const locale = useLocale() as Locale;
   const t = useTranslations("nav");
   const tc = useTranslations("common");
-  const navHidden = useUI((s) => s.navHidden);
-  // Only the series page hides the nav (until THE OTHERS); the flag must not leak to other routes.
-  // usePathname (next-intl) is unprefixed, so "/fa/projects/series" reads as "/projects/series".
-  const hidden = navHidden && pathname?.startsWith("/projects/series") === true;
 
   const links: { label: string; href: string; current: boolean; iris?: { rim?: string; waitForReady?: boolean } }[] = [
     { label: t("work"), href: "/projects", current: pathname === "/projects" },
@@ -81,7 +73,7 @@ export function Nav() {
   if (pathname?.startsWith("/dev")) return null;
 
   return (
-    <header className="lbf-nav" data-hidden={hidden ? "true" : "false"} inert={hidden}>
+    <header className="lbf-nav">
       <style>{CSS}</style>
       <Link
         href="/"

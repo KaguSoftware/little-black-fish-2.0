@@ -90,7 +90,7 @@ export async function ProjectPage({
           </span>
         </p>
         <h1 className="pj-h1" data-long={long ? "true" : "false"}>
-          <span className="pj-cut pj-cut-rest">{title}</span>
+          <span className="pj-cut pj-cut-rest lowres">{title}</span>
           <span className="pj-cut pj-cut-heal" aria-hidden="true">
             {title}
           </span>
@@ -119,7 +119,7 @@ export async function ProjectPage({
               {t("previous")}
             </span>
             <span className="pj-adj-t">
-              <span className="pj-cut pj-cut-rest">{pick(prev, "title", locale)}</span>
+              <span className="pj-cut pj-cut-rest lowres">{pick(prev, "title", locale)}</span>
               <span className="pj-cut pj-cut-heal" aria-hidden="true">
                 {pick(prev, "title", locale)}
               </span>
@@ -131,7 +131,7 @@ export async function ProjectPage({
               <Arrow />
             </span>
             <span className="pj-adj-t">
-              <span className="pj-cut pj-cut-rest">{pick(next, "title", locale)}</span>
+              <span className="pj-cut pj-cut-rest lowres">{pick(next, "title", locale)}</span>
               <span className="pj-cut pj-cut-heal" aria-hidden="true">
                 {pick(next, "title", locale)}
               </span>

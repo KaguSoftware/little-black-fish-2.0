@@ -10,7 +10,7 @@ import { setLenis } from "./lib/lenis";
 /**
  * Lenis on the window, driven from our own rAF loop (autoRaf off). Story progress is
  * scrollY / (#story-spacer height - viewport), clamped 0..1, then smoothed by a spring
- * (stiffness ~42, damping ~13.5) into runtime.progress. runtime.rawProgress is unsmoothed.
+ * (stiffness ~90, damping ~18) into runtime.progress. runtime.rawProgress is unsmoothed.
  * Also opens the iris once the scene is ready when we arrived through a waitForReady transition.
  */
 export function SmoothScroll({ children }: { children: React.ReactNode }) {
@@ -24,8 +24,8 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       autoRaf: false,
       smoothWheel: !rm0,
       syncTouch: false,
-      lerp: 0.075,
-      wheelMultiplier: 0.8,
+      lerp: 0.1,
+      wheelMultiplier: 1,
     });
     setLenis(lenis);
     lenis.scrollTo(0, { immediate: true, force: true });
@@ -66,9 +66,10 @@ export function SmoothScroll({ children }: { children: React.ReactNode }) {
       runtime.rawProgress = raw;
 
       const rm = useUI.getState().reducedMotion;
-      // Near-critically damped and soft: scroll steps become one long camera move.
-      const k = rm ? 520 : 42;
-      const c = rm ? 46 : 13.5;
+      // Near-critically damped: scroll steps become one long camera move, without a lag
+      // that makes the first scrolls feel ignored.
+      const k = rm ? 520 : 90;
+      const c = rm ? 46 : 18;
       const steps = Math.ceil(dt / (1 / 120));
       const h = dt / steps;
       for (let i = 0; i < steps; i++) {

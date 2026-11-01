@@ -430,25 +430,48 @@ html[data-motion="paused"] .holdRing::after {
   letter-spacing: -0.01em;
   pointer-events: none;
 }
+/* Hugs the word, so only the word itself (not the whole row) is the hover target. */
+.titleHit {
+  justify-self: center;
+  display: grid;
+  pointer-events: auto;
+}
 .titleEroded,
 .titleClean {
   grid-area: 1 / 1;
-  transition: opacity 0.9s var(--ease-out-quint);
+  transition:
+    opacity 0.6s var(--ease-out-quint),
+    filter 0.6s var(--ease-out-quint);
 }
+/* At rest the lighter 35 cut: textured, but it still reads while scrolling past. */
 .titleEroded {
-  font-family: var(--font-display-70);
-  color: oklch(0.93 0.012 80 / 0.86);
+  font-family: var(--font-display-35);
+  color: var(--ink);
 }
 .titleClean {
   font-family: var(--font-display);
   color: var(--ink);
   opacity: 0;
+  filter: blur(3px);
 }
 .eyes[data-engaged="true"] .titleClean {
   opacity: 1;
+  filter: none;
 }
 .eyes[data-engaged="true"] .titleEroded {
   opacity: 0;
+}
+/* No hover on touch: the title heals once the section has settled into view. */
+@media (hover: none) {
+  .eyes[data-revealed="true"] .titleClean {
+    opacity: 1;
+    filter: none;
+    transition-delay: 0.35s;
+  }
+  .eyes[data-revealed="true"] .titleEroded {
+    opacity: 0;
+    transition-delay: 0.35s;
+  }
 }
 
 .eyesHit {
@@ -724,7 +747,7 @@ html[data-motion="paused"] .holdRing::after {
 
 .work {
   background: var(--stage);
-  padding: clamp(5rem, 13vw, 10rem) var(--gutter) clamp(5rem, 12vw, 9rem);
+  padding: clamp(5rem, 13vw, 10rem) var(--gutter) clamp(3rem, 6vw, 4.5rem);
 }
 
 .workHead {
@@ -905,7 +928,7 @@ html[data-motion="paused"] .holdRing::after {
   position: relative;
   overflow: hidden;
   background: var(--stage-deep);
-  padding: clamp(5rem, 11vw, 9rem) var(--gutter) 2rem;
+  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter) 2rem;
 }
 
 .footName {
@@ -913,7 +936,7 @@ html[data-motion="paused"] .holdRing::after {
   text-align: end;
   font-family: var(--font-display);
   font-weight: 400;
-  font-size: min(15vw, 26svh);
+  font-size: min(12vw, 19svh);
   line-height: 0.84;
   letter-spacing: -0.012em;
   text-transform: uppercase;
@@ -931,7 +954,7 @@ html[data-motion="paused"] .holdRing::after {
 }
 
 .footRow {
-  margin-top: clamp(3rem, 8vw, 6rem);
+  margin-top: clamp(2rem, 4vw, 3.5rem);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
@@ -1016,7 +1039,7 @@ html[data-motion="paused"] .holdRing::after {
 }
 
 .legal {
-  margin: clamp(3rem, 8vw, 6rem) 0 0;
+  margin: clamp(2rem, 5vw, 3.5rem) 0 0;
   font-size: var(--step--1);
   color: var(--ink-mute);
 }

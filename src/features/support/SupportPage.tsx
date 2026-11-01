@@ -102,7 +102,12 @@ export async function SupportPage({ locale, projects, active }: Props) {
                 </span>
                 <span className="sp-main">
                   <span className="sp-kicker">{t(`${method}.heading`)}</span>
-                  <span className="sp-label">{t(`${method}.label`)}</span>
+                  <span className="sp-label">
+                    <span className="sp-cut sp-cut-rest lowres">{t(`${method}.label`)}</span>
+                    <span className="sp-cut sp-cut-heal" aria-hidden="true">
+                      {t(`${method}.label`)}
+                    </span>
+                  </span>
                 </span>
                 <span className="sp-note">{t(`${method}.caption`)}</span>
                 <span className="sp-arrow" aria-hidden="true">
@@ -184,12 +189,19 @@ align-items:baseline;gap:.35rem var(--gutter);padding:clamp(1rem,2.4vw,2.25rem) 
 .sp-num{grid-area:num;font-variant-numeric:tabular-nums}
 .sp-note{grid-area:note}
 .sp-main{grid-area:label;display:grid;gap:.6rem}
-.sp-label{font-family:var(--font-display-70);font-size:clamp(2.4rem,6.5vw,7rem);line-height:.98;letter-spacing:-.012em;
-color:var(--ink-dim);transition:color .3s var(--ease-out-quint),transform .6s var(--ease-out-quint)}
+.sp-label{display:grid;font-size:clamp(2.4rem,6.5vw,7rem);line-height:.98;letter-spacing:-.012em;
+transition:transform .6s var(--ease-out-quint)}
+/* Low-res at rest, healing to the clean cut on hover/focus (both cuts share one grid cell). */
+.sp-cut{grid-area:1/1;transition:opacity .55s var(--ease-out-quint),color .3s var(--ease-out-quint)}
+.sp-cut-rest{font-family:var(--font-display-70);color:var(--ink-dim)}
+.sp-cut-heal{font-family:var(--font-display);color:var(--teller-child);opacity:0}
+.sp-link:hover .sp-cut-rest,.sp-link:focus-visible .sp-cut-rest{opacity:0}
+.sp-link:hover .sp-cut-heal,.sp-link:focus-visible .sp-cut-heal{opacity:1}
+.sp-label:lang(fa){line-height:1.3}
 .sp-arrow{grid-area:arrow;justify-self:end;font-size:var(--step-1);color:var(--ink-mute);
 transition:color .3s var(--ease-out-quint),transform .45s var(--ease-out-quint)}
 [dir=rtl] .sp-arrow svg{transform:scaleX(-1)}
-.sp-link:hover .sp-label,.sp-link:focus-visible .sp-label{color:var(--teller-child);transform:translateX(.12em)}
+.sp-link:hover .sp-label,.sp-link:focus-visible .sp-label{transform:translateX(.12em)}
 .sp-link:hover .sp-arrow,.sp-link:focus-visible .sp-arrow{color:var(--teller-child);transform:translate(3px,-3px)}
 .sp-link:active .sp-label{transform:translateX(.12em) scale(.99)}
 [dir=rtl] .sp-link:hover .sp-label,[dir=rtl] .sp-link:focus-visible .sp-label{transform:translateX(-.12em)}
@@ -208,7 +220,7 @@ transition:color .3s var(--ease-out-quint),transform .45s var(--ease-out-quint)}
 @keyframes sp-in{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
 @keyframes sp-grow{from{transform:scaleX(0)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.sp-row,.sp-prog{animation-name:sp-fade}.sp-fill{animation:none}
-.sp-label,.sp-arrow,.sp-switch a{transition:color .2s linear}
+.sp-label,.sp-arrow,.sp-switch a{transition:color .2s linear}.sp-cut{transition:opacity .2s linear}
 .sp-link:hover .sp-label,.sp-link:focus-visible .sp-label,.sp-link:hover .sp-arrow,.sp-link:focus-visible .sp-arrow{transform:none}
 [dir=rtl] .sp-link:hover .sp-label,[dir=rtl] .sp-link:focus-visible .sp-label,[dir=rtl] .sp-link:hover .sp-arrow,[dir=rtl] .sp-link:focus-visible .sp-arrow{transform:none}}
 @keyframes sp-fade{from{opacity:0}to{opacity:1}}

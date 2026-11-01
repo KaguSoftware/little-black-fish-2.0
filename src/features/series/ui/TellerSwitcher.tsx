@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { TELLERS, tellerPortrait } from "@/shared/content/characters";
 import { useSeries, useUI } from "@/shared/state/store";
 import { SPRING, tellerAccentCss } from "./lib/enter";
+import { tellerName } from "./lib/i18n";
 
 /**
  * Persistent bottom-edge row of six portrait chips. Always reachable (z-20, pointer-events
@@ -69,6 +70,7 @@ export function TellerSwitcher() {
           const pressed = i === current;
           const accent = tellerAccentCss(t.accent);
           const role = tr(`roles.${t.id}`);
+          const name = tellerName(tr, t.id, t.name);
           return (
             <motion.li key={t.id} layout="position" transition={rm ? { duration: 0 } : SPRING} className="shrink-0">
               <button
@@ -77,7 +79,7 @@ export function TellerSwitcher() {
                 }}
                 type="button"
                 aria-pressed={pressed}
-                aria-label={tr("hearFrom", { name: t.name, role })}
+                aria-label={tr("hearFrom", { name, role })}
                 tabIndex={pressed ? 0 : -1}
                 onClick={() => useSeries.getState().switchTeller(t.id, "switcher")}
                 onKeyDown={(e) => onKeyDown(e, i)}
@@ -123,7 +125,7 @@ export function TellerSwitcher() {
                     style={{ textShadow: "0 0 14px oklch(0.06 0.01 var(--hue) / 0.9)" }}
                   >
                     <span className="display block text-[length:var(--step-0)]" style={{ color: "var(--ink)" }}>
-                      {t.name}
+                      {name}
                     </span>
                     <span className="block text-[0.78rem] leading-tight" style={{ color: "var(--ink-dim)" }}>
                       {role}

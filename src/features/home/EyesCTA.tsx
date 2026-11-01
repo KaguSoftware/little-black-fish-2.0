@@ -92,6 +92,7 @@ export function EyesCTA() {
       ref={ref}
       className={s.eyes}
       data-engaged={engagedUi ? "true" : "false"}
+      data-revealed={revealed ? "true" : "false"}
       data-live={sceneLive ? "true" : "false"}
       aria-labelledby="eyes-title"
     >
@@ -115,12 +116,19 @@ export function EyesCTA() {
         <div className={s.eyesVignette} />
       </div>
 
+      {/* The title heals under the pointer too (and wakes the eyes), not only over the eyes. */}
       <h2 id="eyes-title" className={s.eyesTitle} aria-label={t("title")}>
-        <span className={s.titleEroded} aria-hidden>
-          {t("title")}
-        </span>
-        <span className={s.titleClean} aria-hidden>
-          {t("title")}
+        <span
+          className={s.titleHit}
+          onPointerEnter={(e) => e.pointerType === "mouse" && setEngaged(true)}
+          onPointerLeave={(e) => e.pointerType === "mouse" && setEngaged(false)}
+        >
+          <span className={`${s.titleEroded} lowres-l`} aria-hidden>
+            {t("title")}
+          </span>
+          <span className={s.titleClean} aria-hidden>
+            {t("title")}
+          </span>
         </span>
       </h2>
 
