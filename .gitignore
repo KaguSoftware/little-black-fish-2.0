@@ -42,3 +42,6 @@ next-env.d.ts
 
 # source model drops (extracted into assets-src/character/3d-models)
 assets-src/character/*.zip
+
+# supabase CLI local link metadata
+supabase/.temp/
