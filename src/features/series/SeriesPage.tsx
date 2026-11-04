@@ -2,6 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
+import { TELLERS } from "@/shared/content/characters";
+import { useSiteData } from "@/shared/data/SiteData";
+import { useSeries } from "@/shared/state/store";
 import type { ProjectCard } from "@/shared/data/cards";
 import { STORY_SCROLL_VH, chapterHoldStart } from "@/shared/content/chapters";
 import { SmoothScroll } from "./ui/SmoothScroll";
@@ -27,6 +31,13 @@ const SeriesStage = dynamic(() => import("./scene/SeriesStage"), { ssr: false })
  */
 export default function SeriesPage({ projects, watchUrl }: { projects: ProjectCard[]; watchUrl: string | null }) {
   const t = useTranslations("series");
+  const { hiddenTellers } = useSiteData();
+  // The story opens with the first character that is not hidden in /admin.
+  useEffect(() => {
+    const first = TELLERS.find((x) => !hiddenTellers.includes(x.id));
+    const cur = useSeries.getState().teller;
+    if (first && hiddenTellers.includes(cur)) useSeries.getState().switchTeller(first.id, "init");
+  }, [hiddenTellers]);
   const makerTopVh = Math.round(chapterHoldStart("maker") * STORY_SCROLL_VH + 55);
   return (
     <SmoothScroll>

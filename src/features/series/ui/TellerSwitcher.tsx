@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { TELLERS, tellerPortrait } from "@/shared/content/characters";
+import { useSiteData } from "@/shared/data/SiteData";
 import { useSeries, useUI } from "@/shared/state/store";
 import { SPRING, tellerAccentCss } from "./lib/enter";
 import { tellerName } from "./lib/i18n";
@@ -15,12 +16,14 @@ import { tellerName } from "./lib/i18n";
  */
 export function TellerSwitcher() {
   const tr = useTranslations("series");
+  const { hiddenTellers } = useSiteData();
+  const cast = TELLERS.filter((t) => !hiddenTellers.includes(t.id));
   const rtl = useLocale() === "fa";
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
   const rowRef = useRef<HTMLUListElement>(null);
   const btns = useRef<(HTMLButtonElement | null)[]>([]);
-  const current = TELLERS.findIndex((t) => t.id === teller);
+  const current = cast.findIndex((t) => t.id === teller);
 
   // Keep the pressed chip (plus its name) in view on the mobile scroll row.
   useEffect(() => {
@@ -43,7 +46,7 @@ export function TellerSwitcher() {
   }, [current, rm, rtl]);
 
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
-    const n = TELLERS.length;
+    const n = cast.length;
     let j = -1;
     // The row flows right to left on fa, so the arrow that points at the next chip flips.
     const next = rtl ? "ArrowLeft" : "ArrowRight";
@@ -66,7 +69,7 @@ export function TellerSwitcher() {
         ref={rowRef}
         className="pointer-events-auto flex w-full items-center gap-1.5 overflow-x-auto px-[calc(var(--gutter)-0.25rem)] py-2 [scrollbar-width:none] md:w-fit md:max-w-full md:gap-2 [&::-webkit-scrollbar]:hidden"
       >
-        {TELLERS.map((t, i) => {
+        {cast.map((t, i) => {
           const pressed = i === current;
           const accent = tellerAccentCss(t.accent);
           const role = tr(`roles.${t.id}`);

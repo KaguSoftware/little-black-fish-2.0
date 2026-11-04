@@ -27,8 +27,23 @@
  *   signOut(locale: string): Promise<never>                                       // → /{locale}/login
  * data.ts (server-only, not an action)
  *   loadAdminData(): Promise<AdminData>
+ *   listContentEntries(): Promise<ContentEntry[]>                                   // also included in AdminData.content
+ * Full details: docs/admin-contract.md
  */
-import type { CategoryRow, ContactSubmissionRow, HeroSlideRow, ProjectRow } from "@/shared/data/types";
+import type {
+  AdminAuditRow,
+  CategoryRow,
+  ContactSubmissionRow,
+  ContentLocale,
+  HeroSlideRow,
+  ProjectRow,
+  SeriesChapterRow,
+  SeriesCharacterRow,
+  TeamMemberRow,
+} from "@/shared/data/types";
+import type { Settings } from "@/shared/data/settingsSchema";
+
+export type { Settings, SettingKey } from "@/shared/data/settingsSchema";
 
 export interface ProjectInput {
   titleEn: string;
@@ -70,7 +85,79 @@ export interface CategoryInput {
   nameFa: string;
 }
 
-export type ReorderTable = "projects" | "hero_slides" | "categories";
+export type ReorderTable =
+  | "projects"
+  | "hero_slides"
+  | "categories"
+  | "team_members"
+  | "series_chapters"
+  | "series_characters";
+
+export interface ContentEntryInput {
+  /** "<namespace>.<dotted.path>", numeric segments for arrays. Must exist in the default JSON. */
+  key: string;
+  locale: ContentLocale;
+  value: string;
+}
+
+/** One editable string of site copy, both languages side by side. */
+export interface ContentEntry {
+  key: string;
+  namespace: string;
+  /** key without the namespace. */
+  path: string;
+  /** Effective text (override if present, else default). */
+  en: string;
+  fa: string;
+  enOverridden: boolean;
+  faOverridden: boolean;
+  enDefault: string;
+  faDefault: string;
+}
+
+export interface TeamMemberInput {
+  nameEn: string;
+  nameFa: string;
+  titleEn?: string | null;
+  titleFa?: string | null;
+  roleEn?: string | null;
+  roleFa?: string | null;
+  /** http(s) URL (storage upload) or site path; empty = monogram stand-in. */
+  photoUrl?: string | null;
+  /** Handle, @handle or instagram.com URL; stored as the bare handle. */
+  instagram?: string | null;
+}
+
+export interface SeriesChapterInput {
+  wordEn: string;
+  wordFa: string;
+  titleEn: string;
+  titleFa: string;
+}
+
+export interface SeriesCharacterInput {
+  nameEn: string;
+  nameFa: string;
+  roleEn?: string | null;
+  roleFa?: string | null;
+  moodEn?: string | null;
+  moodFa?: string | null;
+  /** hello / world / day / did / others; empty or missing = built-in line. */
+  narrationEn?: Record<string, string> | null;
+  narrationFa?: Record<string, string> | null;
+}
+
+export interface MediaItem {
+  name: string;
+  /** Path inside the bucket (pass to deleteMedia). */
+  path: string;
+  url: string;
+  size: number;
+  mimeType: string;
+  createdAt: string;
+  /** Labels of the records still using this file; empty = safe to delete. */
+  usedBy: string[];
+}
 
 export interface AdminData {
   projects: ProjectRow[];
@@ -78,4 +165,16 @@ export interface AdminData {
   categories: CategoryRow[];
   /** Latest 200, newest first. */
   submissions: ContactSubmissionRow[];
+  teamMembers: TeamMemberRow[];
+  /** All rows incl. hidden; empty until seeded (scripts/seed-content.mjs). */
+  seriesChapters: SeriesChapterRow[];
+  seriesCharacters: SeriesCharacterRow[];
+  /** Effective settings (stored value or code default) for every key. */
+  settings: Settings;
+  /** Keys that have a stored value (the rest show code defaults). */
+  settingsStored: string[];
+  /** Every editable string of copy; see ContentEntry. */
+  content: ContentEntry[];
+  /** Latest 50 admin actions, newest first. */
+  audit: AdminAuditRow[];
 }

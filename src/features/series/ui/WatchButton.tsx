@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { SITE } from "@/shared/content/site";
+import { useSiteData } from "@/shared/data/SiteData";
 import { runtime } from "@/shared/lib/runtime";
 import { useUI } from "@/shared/state/store";
 import { HairlineLink } from "./lib/HairlineLink";
@@ -11,10 +11,11 @@ import { enterMotion } from "./lib/enter";
 
 /**
  * "Watch the series" in WHAT I DID, on the text side under the narration. Shown when
- * fx.watch > 0.5. Links to the series row's episodes (SITE.seriesUrl without a row). A rAF watcher flips discrete state only on threshold crossings.
+ * fx.watch > 0.5. Links to the series row's episodes (settings.series.url without a row). A rAF watcher flips discrete state only on threshold crossings.
  */
 export function WatchButton({ href }: { href: string | null }) {
   const t = useTranslations("series");
+  const { series } = useSiteData();
   const rm = useUI((s) => s.reducedMotion);
   const [shown, setShown] = useState(false);
 
@@ -46,7 +47,7 @@ export function WatchButton({ href }: { href: string | null }) {
           exit={m.exit}
         >
           <HairlineLink
-            href={href || SITE.seriesUrl}
+            href={href || series.url}
             className="pointer-events-auto display"
             style={{
               fontSize: "var(--step-2)",

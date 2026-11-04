@@ -10,8 +10,13 @@ import { Grain } from "@/shared/ui/Grain";
 import { MotionToggle } from "@/shared/ui/MotionToggle";
 import { IrisTransition } from "@/shared/transition/IrisTransition";
 import { LowResFilters } from "@/shared/ui/LowResFilters";
+import { SiteDataProvider } from "@/shared/data/SiteData";
+import { getSettings } from "@/shared/data/settings";
+import { getSeriesContent } from "@/shared/data/series";
+import { CHAPTERS } from "@/shared/content/chapters";
+import { TELLERS } from "@/shared/content/characters";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://littleblackfishstudios.com";
+const ENV_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -20,13 +25,28 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "common" });
+  const { seo, studio } = await getSettings();
+  const name = seo.title || t("studio");
+  const description = seo.description || t("description");
+  let base: URL;
+  try {
+    base = new URL(ENV_SITE_URL ?? studio.url);
+  } catch {
+    base = new URL("https://littleblackfishstudios.com");
+  }
   return {
-    metadataBase: new URL(SITE_URL),
+    metadataBase: base,
     title: {
-      default: t("studio"),
-      template: `%s · ${t("studio")}`,
+      default: name,
+      template: `%s · ${name}`,
     },
-    description: t("description"),
+    description,
+    ...(seo.ogImage
+      ? {
+          openGraph: { title: name, description, images: [seo.ogImage] },
+          twitter: { card: "summary_large_image" as const, images: [seo.ogImage] },
+        }
+      : {}),
   };
 }
 
@@ -40,11 +60,25 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
   const t = await getTranslations("common");
+  const [settings, series] = await Promise.all([getSettings(), getSeriesContent()]);
+  const shownTellers = new Set(series.characters.map((c) => c.slug));
+  const shownChapters = new Set(series.chapters.map((c) => c.slug));
+  const hiddenTellers = shownTellers.size ? TELLERS.map((x) => x.id as string).filter((id) => !shownTellers.has(id)) : [];
+  const hiddenChapters = shownChapters.size ? CHAPTERS.map((x) => x.id as string).filter((id) => !shownChapters.has(id)) : [];
+  const siteData = {
+    studio: settings.studio,
+    socials: settings.socials,
+    series: settings.series,
+    heroVideos: settings.heroVideos,
+    hiddenTellers,
+    hiddenChapters,
+  };
 
   return (
     <html lang={locale} dir={locale === "fa" ? "rtl" : "ltr"}>
       <body>
         <NextIntlClientProvider>
+          <SiteDataProvider value={siteData}>
           <Providers>
             <a href="#main" className="sr-only-focusable fixed start-4 top-4 z-[100] bg-stage px-3 py-2">
               {t("skipToContent")}
@@ -55,6 +89,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             <Grain />
             <IrisTransition />
           </Providers>
+          </SiteDataProvider>
         </NextIntlClientProvider>
         <LowResFilters />
       </body>

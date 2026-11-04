@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { getSettings } from "@/shared/data/settings";
 import { FIELD_CSS } from "@/shared/ui/fields";
 import { ContactForm } from "./ContactForm";
 
@@ -8,6 +9,7 @@ import { ContactForm } from "./ContactForm";
  */
 export async function ContactPage() {
   const t = await getTranslations("contact");
+  const { studio } = await getSettings();
 
   return (
     <main id="main" className="ct">
@@ -22,6 +24,11 @@ export async function ContactPage() {
           <p className="ct-intro ct-rise" style={{ ["--i" as string]: 1 }}>
             {t("intro")}
           </p>
+          {studio.email ? (
+            <a className="ct-mail ct-rise" style={{ ["--i" as string]: 2 }} href={`mailto:${studio.email}`}>
+              {studio.email}
+            </a>
+          ) : null}
         </header>
 
         <ContactForm />
@@ -41,6 +48,8 @@ padding:clamp(6.5rem,15vh,10rem) var(--gutter) clamp(4.5rem,10vh,7rem)}
 .ct-head{display:grid;gap:1.25rem;align-content:start}
 .ct-h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:var(--step-3);line-height:.9;color:var(--ink-dim);text-wrap:balance}
 .ct-intro{margin:0;max-width:24ch;font-size:var(--step-1);line-height:1.3;color:var(--ink-dim);text-wrap:pretty}
+.ct-mail{justify-self:start;font-size:var(--step-0);color:var(--ink-dim);text-underline-offset:.2em}
+.ct-mail:hover,.ct-mail:focus-visible{color:var(--ink)}
 :lang(fa) .ct-h1{line-height:1.15}
 :lang(fa) .ct-intro{line-height:1.6}
 

@@ -5,6 +5,7 @@ import { ProjectPage } from "@/features/project/ProjectPage";
 import { permanentRedirect } from "@/i18n/navigation";
 import { SERIES_HREF, SERIES_SLUG, coverImage } from "@/shared/data/cards";
 import { pick } from "@/shared/data/localize";
+import { getSettings } from "@/shared/data/settings";
 import { getProjectBySlug, getProjectNav, getVisibleCategories } from "@/shared/data/public";
 
 export const revalidate = 3600;
@@ -30,7 +31,9 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/projects
   const t = await getTranslations({ locale, namespace: "project" });
   const title = pick(project, "title", locale);
   const description = excerpt(pick(project, "description", locale)) || t("metaFallback", { title });
-  const image = coverImage(project);
+  // openGraph here replaces the layout's, so fall back to the site-wide image when the project has none.
+  const { seo } = await getSettings();
+  const image = coverImage(project) || seo.ogImage || null;
   const path = `/projects/${project.slug}`;
   return {
     title,

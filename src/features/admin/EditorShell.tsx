@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, type FormEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+
+/** A collection panel provides this so any open editor can report unsaved edits upward. */
+export const EditorDirtyContext = createContext<(dirty: boolean) => void>(() => {});
 
 interface Props {
   title: string;
@@ -20,6 +23,11 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
   const t = useTranslations("admin");
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
+  const reportDirty = useContext(EditorDirtyContext);
+  useEffect(() => {
+    reportDirty(dirty);
+    return () => reportDirty(false);
+  }, [dirty, reportDirty]);
 
   useEffect(() => {
     const el = heading.current;

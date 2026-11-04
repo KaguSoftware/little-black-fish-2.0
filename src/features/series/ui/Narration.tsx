@@ -58,14 +58,14 @@ export function Narration() {
   const own = `lines.${t.id}.${cur.chapter}`;
   // The shared HELLO / MAKER templates are localized; a teller's own line comes from messages
   // "lines" when the locale has it (Persian), else the English source.
-  const text =
-    cur.chapter === "hello" && raw === HELLO(t.name)
+  // Admin-edited lines (series_characters.narration) arrive through "lines" in both locales.
+  const text = tr.has(own)
+    ? tr(own)
+    : cur.chapter === "hello" && raw === HELLO(t.name)
       ? tr("narration.hello", { name })
       : cur.chapter === "maker" && raw === MAKER
         ? tr("narration.maker")
-        : tr.has(own)
-          ? tr(own)
-          : raw;
+        : raw;
   const retype = cur.retype && !rm;
   const m = enterMotion(rm, retype ? EXIT_MS / 1000 : 0);
 

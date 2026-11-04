@@ -175,6 +175,336 @@
     "confirmDelete": "Delete the message from {name}? This can’t be undone.",
     "deleted": "Message deleted.",
     "emailFailed": "Email delivery failed.",
-    "emailFailedWith": "Email delivery failed: {error}"
+    "emailFailedWith": "Email delivery failed: {error}",
+    "export": "Export CSV",
+    "search": "Search messages",
+    "filter": "Show",
+    "filterAll": "All messages",
+    "filterUnread": "Unread only",
+    "count": "{count} of {total} messages",
+    "noMatchTitle": "No matching messages",
+    "noMatchText": "Try another search or show all messages.",
+    "exported": "Exported {count} messages.",
+    "reply": "Reply by email",
+    "replySubject": "Re: your message to Little Black Fish"
+  },
+  "opensNewTab": "opens in a new tab",
+  "listMax": "You can add up to {max} items.",
+  "nav": {
+    "label": "Admin sections",
+    "jump": "Go to section",
+    "unsaved": "Unsaved changes",
+    "groups": {
+      "overview": "Overview",
+      "work": "Work",
+      "pages": "Pages",
+      "series": "Series",
+      "site": "Site",
+      "inbox": "Inbox",
+      "account": "Account"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "projects": "Projects",
+      "categories": "Categories",
+      "hero": "Hero slides",
+      "team": "Team",
+      "content": "Page copy",
+      "series": "Series",
+      "settings": "Settings",
+      "media": "Media",
+      "inbox": "Messages",
+      "account": "Sign out"
+    }
+  },
+  "account": {
+    "sub": "You are signed in as an administrator.",
+    "confirmUnsaved": "You have unsaved changes. Sign out anyway?"
+  },
+  "dashboard": {
+    "sub": "What is on the site, and what changed lately.",
+    "viewLive": "View live site",
+    "published": "{count} published",
+    "active": "{count} active",
+    "unreadMessages": "Unread messages",
+    "ofTotal": "of {count}",
+    "copyEdits": "Edited texts",
+    "copyEditsNote": "differ from the defaults",
+    "settingsCustom": "Custom settings",
+    "settingsNote": "groups saved",
+    "recent": "Recent changes",
+    "recentEmpty": "Nothing recorded yet.",
+    "auditNote": "Changes to texts, settings, team, series and media are logged here.",
+    "quick": "Quick links",
+    "quickLinks": {
+      "projects": "Add or edit projects",
+      "content": "Edit page texts",
+      "settings": "Studio, socials and SEO",
+      "media": "Manage uploaded files",
+      "inbox": "Read messages"
+    },
+    "actions": {
+      "content_save": "Saved page texts",
+      "content_reset": "Reset a text to default",
+      "settings_save": "Saved settings",
+      "team_create": "Added a team member",
+      "team_update": "Edited a team member",
+      "team_show": "Showed a team member",
+      "team_hide": "Hid a team member",
+      "team_delete": "Deleted a team member",
+      "series_chapter_update": "Edited a chapter",
+      "series_character_update": "Edited a character",
+      "series_chapters_show": "Showed a chapter",
+      "series_chapters_hide": "Hid a chapter",
+      "series_characters_show": "Showed a character",
+      "series_characters_hide": "Hid a character",
+      "media_delete": "Deleted a file"
+    }
+  },
+  "content": {
+    "title": "Page copy",
+    "sub": "Every text on the public site, in English and Persian. Only what you change is stored; the rest keeps its default.",
+    "search": "Search texts",
+    "searchPlaceholder": "A word, a key or a sentence",
+    "modifiedOnly": "Only edited",
+    "namespaces": "Pages and areas",
+    "ns": {
+      "home": "Home",
+      "about": "About",
+      "contact": "Contact",
+      "support": "Support",
+      "series": "Series",
+      "footer": "Footer",
+      "nav": "Navigation",
+      "archive": "Archive",
+      "category": "Category",
+      "project": "Project",
+      "login": "Login",
+      "common": "Common"
+    },
+    "modifiedCount": "{count} edited",
+    "unsavedCount": "{count} unsaved",
+    "results": "{count, plural, =0 {No matches} one {# match across all pages} other {# matches across all pages}}",
+    "inNamespace": "{count, plural, =0 {No texts} one {# text} other {# texts}}",
+    "viewLive": "View live page",
+    "noResultsTitle": "No matching texts",
+    "noResultsText": "Try another word, or clear the search.",
+    "emptyTitle": "Nothing to show",
+    "emptyText": "No texts here match the current filter.",
+    "showMore": "Show {count} more",
+    "general": "General",
+    "saveBar": "Unsaved text changes",
+    "unsaved": "{count, plural, one {# unsaved change} other {# unsaved changes}}",
+    "discardAll": "Discard all",
+    "saveN": "{count, plural, one {Save # change} other {Save # changes}}",
+    "confirmDiscardAll": "Discard {count} unsaved changes?",
+    "confirmReset": "Reset this text to its default? The edited version is removed.",
+    "resetDone": "Text reset to default.",
+    "saved": "{count, plural, one {# text saved.} other {# texts saved.}}",
+    "modified": "Edited",
+    "unsavedBadge": "Unsaved",
+    "undo": "Undo",
+    "reset": "Reset to default",
+    "resetting": "Resetting…",
+    "placeholderWarn": "The default has placeholders or tags; keep the same ones or the text may break.",
+    "default": "Default:",
+    "emptyDefault": "(empty)"
+  },
+  "settings": {
+    "title": "Settings",
+    "sub": "Studio details, links, SEO and other values used across the site.",
+    "jump": "Settings groups",
+    "saved": "{name} saved.",
+    "usingDefault": "Using built-in default",
+    "confirmDefaults": "Fill this form with the built-in defaults? Nothing is saved until you press Save.",
+    "loadDefaults": "Load defaults",
+    "save": "Save",
+    "cards": {
+      "studio": {
+        "title": "Studio",
+        "sub": "Name, tagline, city and web address."
+      },
+      "socials": {
+        "title": "Social links",
+        "sub": "Shown in the footer and wherever the site links out."
+      },
+      "payments": {
+        "title": "Support links",
+        "sub": "Where the Support page sends donations."
+      },
+      "contact": {
+        "title": "Contact form",
+        "sub": "Where new messages are emailed."
+      },
+      "seo": {
+        "title": "Search and sharing",
+        "sub": "Page title, description and the image shown when the site is shared."
+      },
+      "series": {
+        "title": "Series info",
+        "sub": "Title, year and link of the series."
+      },
+      "heroVideos": {
+        "title": "Hero videos",
+        "sub": "The clips playing on the home page, in order."
+      }
+    },
+    "studio": {
+      "name": "Studio name",
+      "fullName": "Full studio name",
+      "tagline": "Tagline",
+      "city": "City",
+      "url": "Site address",
+      "urlHint": "The full public address, starting with https://.",
+      "urlEnvHint": "If the NEXT_PUBLIC_SITE_URL environment variable is set on the server, it overrides this value.",
+      "email": "Public email",
+      "emailHint": "Optional. Shown on the site when set."
+    },
+    "socials": {
+      "add": "Add link",
+      "empty": "No social links.",
+      "item": "Link {n}",
+      "label": "Name",
+      "href": "Address"
+    },
+    "payments": {
+      "add": "Add link",
+      "empty": "No support links.",
+      "item": "Link {n}",
+      "key": "Key",
+      "keyHint": "Lowercase letters, digits and dashes. “worldwide” and “iran” are the two the Support page uses.",
+      "label": "Button label",
+      "labelHint": "Optional. Leave empty for the translated default.",
+      "href": "Address"
+    },
+    "contact": {
+      "email": "Notification email",
+      "hint": "Leave empty to use the address configured on the server."
+    },
+    "seo": {
+      "title": "Site title",
+      "titleHint": "Leave empty to use the translated studio name.",
+      "description": "Description",
+      "descriptionHint": "Leave empty to use the translated default. Around 150 characters works well.",
+      "ogImage": "Sharing image",
+      "ogHint": "Shown in link previews. Leave empty for none."
+    },
+    "series": {
+      "title": "Series title",
+      "year": "Year",
+      "url": "Link",
+      "urlHint": "A full address, a path such as /watch, or an anchor such as #watch."
+    },
+    "heroVideos": {
+      "add": "Add video",
+      "empty": "No hero videos.",
+      "item": "Video {n}",
+      "src": "Video file",
+      "srcHint": "Upload an MP4 or WebM clip, or paste a link or a path such as /videos/hero-1.mp4.",
+      "title": "Title",
+      "project": "Linked project",
+      "projectHint": "Optional. The slug of the project this clip opens."
+    }
+  },
+  "team": {
+    "sub": "People shown on the About page, in this order.",
+    "add": "Add person",
+    "newTitle": "New team member",
+    "editTitle": "Edit team member",
+    "create": "Add person",
+    "created": "Team member added.",
+    "saved": "Team member saved.",
+    "emptyTitle": "No team members",
+    "emptyText": "Add the first person. They stay hidden until shown.",
+    "off": "Hidden",
+    "turnOn": "Show",
+    "turnOff": "Hide",
+    "confirmDelete": "Delete {name}? Their photo is removed too if nothing else uses it. This can’t be undone.",
+    "photo": "Photo",
+    "photoHint": "Optional. Without a photo a monogram is shown.",
+    "nameEn": "Name (English)",
+    "nameFa": "Name (Persian)",
+    "titleEn": "Title (English)",
+    "titleFa": "Title (Persian)",
+    "roleEn": "Role (English)",
+    "roleFa": "Role (Persian)",
+    "instagram": "Instagram",
+    "instagramHint": "A handle, @handle or an instagram.com link."
+  },
+  "series": {
+    "title": "Series",
+    "sub": "Chapters and the characters who tell them. Models, colors and camera stay in code.",
+    "partLabel": "Series part",
+    "parts": {
+      "chapters": "Chapters",
+      "characters": "Characters"
+    },
+    "unstoredNote": "Rows marked “built-in” have never been edited. Reordering or editing them stores them in the database.",
+    "chaptersSub": "Chapter words and titles in both languages.",
+    "chaptersNote": "Chapters are driven by the scene in code, so they cannot be hidden here. You can edit their words and titles and change their order.",
+    "charactersNote": "Hiding a character only removes them from the series page cast and switcher. The scene itself still contains them.",
+    "charactersSub": "Names, roles, moods and narration lines.",
+    "emptyTitle": "Nothing here",
+    "emptyText": "No rows were found.",
+    "off": "Hidden",
+    "turnOn": "Show",
+    "turnOff": "Hide",
+    "default": "built-in",
+    "chapterSaved": "Chapter saved.",
+    "characterSaved": "Character saved.",
+    "editChapter": "Edit chapter {slug}",
+    "editCharacter": "Edit character {slug}",
+    "wordEn": "Big word (English)",
+    "wordFa": "Big word (Persian)",
+    "wordHint": "The large faint word behind the hero.",
+    "nameEn": "Name (English)",
+    "nameFa": "Name (Persian)",
+    "roleEn": "Role (English)",
+    "roleFa": "Role (Persian)",
+    "moodEn": "Mood (English)",
+    "moodFa": "Mood (Persian)",
+    "narration": "Narration",
+    "narrationHint": "One line per chapter. Leave a line empty to keep the built-in text, shown here as the placeholder.",
+    "line": "{chapter}, {lang}",
+    "lineNames": {
+      "hello": "Hello",
+      "world": "The world",
+      "day": "The day",
+      "did": "What they did",
+      "others": "The others"
+    }
+  },
+  "media": {
+    "title": "Media",
+    "sub": "Files uploaded to the site, with where each one is used.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "capNote": "Only the newest {max} files are listed. Older files exist but are not shown here.",
+    "bucketLabel": "Storage",
+    "buckets": {
+      "projects": "Projects and team",
+      "hero": "Hero"
+    },
+    "upload": "Upload to this storage",
+    "uploadHint": "Uploaded files appear in the list below.",
+    "search": "Search files",
+    "onlyUnused": "Only unused ({count})",
+    "count": "{count} of {total} files",
+    "errorTitle": "Couldn’t load the files",
+    "retry": "Try again",
+    "emptyTitle": "No files yet",
+    "emptyText": "Upload a file above to see it here.",
+    "noMatchTitle": "No matching files",
+    "noMatchText": "Try another name, or show used files too.",
+    "usedBy": "Used by {users}",
+    "unreferenced": "Unused",
+    "copyUrl": "Copy link",
+    "copiedShort": "Copied",
+    "copied": "Link copied.",
+    "copyFailed": "Couldn’t copy the link.",
+    "open": "Open",
+    "confirmDelete": "Delete {name}? This can’t be undone.",
+    "confirmDeleteUsed": "{name} is still used by {users}. Deleting it leaves broken images there. Delete anyway?",
+    "deleted": "Deleted {name}."
   }
 }

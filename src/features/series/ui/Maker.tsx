@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { CHAPTER_BY_ID } from "@/shared/content/chapters";
-import { SITE } from "@/shared/content/site";
+import { useSiteData } from "@/shared/data/SiteData";
 import { cardImage, type ProjectCard as Card } from "@/shared/data/cards";
 import { navigateWithIris } from "@/shared/transition/navigate";
 import { useUI } from "@/shared/state/store";
@@ -85,6 +85,7 @@ export function Maker({ projects }: { projects: Card[] }) {
   const t = useTranslations("series");
   const tc = useTranslations("common");
   const locale = useLocale();
+  const { studio, socials } = useSiteData();
   const works = projects.slice(0, SLOTS.length);
 
   return (
@@ -130,16 +131,18 @@ export function Maker({ projects }: { projects: Card[] }) {
           <p className="text-[length:var(--step--1)]" style={{ color: "var(--ink-dim)", textShadow: SHADOW }}>
             {t("maker.sayHello")}
           </p>
-          <HairlineLink
-            href={`mailto:${SITE.email}`}
-            className="display w-fit"
-            style={{ fontSize: "var(--step-2)", lineHeight: 1, color: "var(--ink)", textShadow: SHADOW }}
-          >
-            {SITE.email}
-          </HairlineLink>
+          {studio.email ? (
+            <HairlineLink
+              href={`mailto:${studio.email}`}
+              className="display w-fit"
+              style={{ fontSize: "var(--step-2)", lineHeight: 1, color: "var(--ink)", textShadow: SHADOW }}
+            >
+              {studio.email}
+            </HairlineLink>
+          ) : null}
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[length:var(--step-0)]">
-            {SITE.socials.map((s) => (
-              <li key={s.label}>
+            {socials.map((s, si) => (
+              <li key={`${si}-${s.label}`}>
                 <HairlineLink href={s.href} style={{ color: "var(--ink)", textShadow: SHADOW }}>
                   {s.label}
                 </HairlineLink>

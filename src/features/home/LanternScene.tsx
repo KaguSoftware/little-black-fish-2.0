@@ -25,7 +25,6 @@ import {
 import { STILL_BY_ID, stillCard, stillHero, stillPlate } from "@/shared/content/stills";
 import type { StillId } from "@/shared/content/types";
 import { TELLER_BY_ID } from "@/shared/content/characters";
-import { HERO_VIDEOS } from "@/shared/data/hero";
 import { useUI } from "@/shared/state/store";
 import { AdaptiveDpr } from "@/shared/lib/AdaptiveDpr";
 import { oklchToLinear } from "@/shared/lib/color";
@@ -89,10 +88,15 @@ const PAN = 0.035;
  * WALL_ORDER index; each keeps the replaced still as poster, reduced-motion frame and fallback
  * (and its teller tint). 7 = s13 in the near-mid lane, 9 = s18 in a farther lane.
  */
-const VIDEO_SLOTS: Record<number, string> = {
-  7: HERO_VIDEOS[0].src,
-  9: HERO_VIDEOS[1].src,
-};
+const VIDEO_SLOT_INDEX = [7, 9] as const;
+/** The hero films (settings.heroVideos, in order) mapped onto their wall slots. */
+function videoSlots(videos: readonly string[]): Record<number, string> {
+  const out: Record<number, string> = {};
+  VIDEO_SLOT_INDEX.forEach((slot, k) => {
+    if (videos[k]) out[slot] = videos[k];
+  });
+  return out;
+}
 
 /** A plate's footprint in hero CSS px, written each frame so the wall can tell which one the light is on. */
 interface PlateRect {
@@ -298,7 +302,7 @@ const WRAP = 1.9;
 /** How much a focused plate grows as it comes forward. */
 const LIFT = 0.06;
 
-function buildSpecs(count: number, highTier: boolean): PlateSpec[] {
+function buildSpecs(count: number, highTier: boolean, videos: Record<number, string>): PlateSpec[] {
   const ids = WALL_ORDER.slice(0, count);
   const lanes = DEPTHS.length;
   return ids.map((id, i) => {
@@ -319,7 +323,7 @@ function buildSpecs(count: number, highTier: boolean): PlateSpec[] {
       seed: i * 1.618,
       teller: oklchToLinear(TELLER_BY_ID[still.tellers[0]].accent),
       large: highTier && lane < 2,
-      video: highTier ? VIDEO_SLOTS[i] : undefined,
+      video: highTier ? videos[i] : undefined,
     };
   });
 }
@@ -789,11 +793,13 @@ function pickFocus(f: Focus) {
   f.target = best;
 }
 
-function Wall({ highTier, motionOn, active }: { highTier: boolean; motionOn: { current: boolean }; active: boolean }) {
+function Wall({ highTier, motionOn, active, videos }: { highTier: boolean; motionOn: { current: boolean }; active: boolean; videos: readonly string[] }) {
   const count = highTier ? 12 : 7;
   // Films start fetching only once every still has been requested (the stagger above).
   const videoDelay = 120 + count * (highTier ? 260 : 340) + 600;
-  const specs = useMemo(() => buildSpecs(count, highTier), [count, highTier]);
+  const videoKey = videos.join("|");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const specs = useMemo(() => buildSpecs(count, highTier, videoSlots(videos)), [count, highTier, videoKey]);
   const shared = useMemo<Shared>(
     () => ({
       uLant: { value: new Vector2(0, 0) },
@@ -840,11 +846,13 @@ export interface LanternSceneProps {
   /** Render loop on/off (off when scrolled away). */
   active: boolean;
   highTier: boolean;
+  /** Hero film sources, in order (settings.heroVideos). */
+  videos: readonly string[];
   /** Ambient camera sway allowed (false under reduced motion). */
   motionOn: { current: boolean };
 }
 
-export default function LanternScene({ active, highTier, motionOn }: LanternSceneProps) {
+export default function LanternScene({ active, highTier, motionOn, videos }: LanternSceneProps) {
   return (
     <Canvas
       flat
@@ -858,7 +866,7 @@ export default function LanternScene({ active, highTier, motionOn }: LanternScen
     >
       {/* The halftone grid is laid out in drawing-buffer px, so a lower ratio only softens the dots. */}
       <AdaptiveDpr min={1} max={highTier ? 2 : 1.5} />
-      <Wall highTier={highTier} motionOn={motionOn} active={active} />
+      <Wall highTier={highTier} motionOn={motionOn} active={active} videos={videos} />
     </Canvas>
   );
 }

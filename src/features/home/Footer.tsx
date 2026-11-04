@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useInView } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SITE } from "@/shared/content/site";
+import { useSiteData } from "@/shared/data/SiteData";
 import { useUI } from "@/shared/state/store";
 import { EnamadSeal } from "@/shared/ui/EnamadSeal";
 import s from "./home.module.css";
@@ -55,10 +56,12 @@ async function copyText(text: string) {
   }
 }
 
-/** The wordmark is the brand mark: Latin in every locale. Its spoken name comes from messages. */
-const LINES = ["Little", "Black", "Fish"] as const;
+/** The wordmark is the brand mark: Latin in every locale (the studio name, one word per line). Its spoken name comes from messages. */
 
 export function Footer() {
+  const { studio, socials } = useSiteData();
+  const LINES = studio.name.split(/\s+/).filter(Boolean);
+  const email = studio.email;
   const [copied, setCopied] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   const reduced = useUI((st) => st.reducedMotion);
@@ -73,18 +76,18 @@ export function Footer() {
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const onCopy = useCallback(async () => {
-    const ok = await copyText(SITE.email);
+    const ok = await copyText(email);
     if (!ok) return;
     setCopied(true);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setCopied(false), 1900);
-  }, []);
+  }, [email]);
 
   return (
     <footer className={s.footer}>
       <h2 ref={nameRef} className={s.footName} aria-label={t("name")}>
         {LINES.map((l, i) => (
-          <span key={l} className={s.footLine} aria-hidden>
+          <span key={`${l}-${i}`} className={s.footLine} aria-hidden>
             <motion.span
               className={s.footLineInner}
               initial={reduced ? { opacity: 0 } : { y: "55%", opacity: 0, filter: "blur(6px)" }}
@@ -99,31 +102,35 @@ export function Footer() {
 
       <div className={s.footRow}>
         <div className={s.contact}>
-          <p className={s.contactLead}>{t("hello")}</p>
-          <button type="button" className={s.email} onClick={onCopy} aria-label={t("copyEmail", { email: SITE.email })}>
-            <span className={s.emailText}>{SITE.email}</span>
-            <span className={s.emailIcon} aria-hidden>
-              <AnimatePresence mode="popLayout" initial={false}>
-                {copied ? (
-                  <motion.span key="check" className={s.iconSlot} {...SWAP}>
-                    <CheckIcon />
-                  </motion.span>
-                ) : (
-                  <motion.span key="copy" className={s.iconSlot} {...SWAP}>
-                    <CopyIcon />
-                  </motion.span>
-                )}
-              </AnimatePresence>
+          {email ? (
+            <>
+            <p className={s.contactLead}>{t("hello")}</p>
+            <button type="button" className={s.email} onClick={onCopy} aria-label={t("copyEmail", { email })}>
+              <span className={s.emailText}>{email}</span>
+              <span className={s.emailIcon} aria-hidden>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {copied ? (
+                    <motion.span key="check" className={s.iconSlot} {...SWAP}>
+                      <CheckIcon />
+                    </motion.span>
+                  ) : (
+                    <motion.span key="copy" className={s.iconSlot} {...SWAP}>
+                      <CopyIcon />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </span>
+            </button>
+            <span className={s.copied} role="status" aria-live="polite">
+              {copied ? t("copied") : ""}
             </span>
-          </button>
-          <span className={s.copied} role="status" aria-live="polite">
-            {copied ? t("copied") : ""}
-          </span>
+            </>
+          ) : null}
         </div>
 
         <ul className={s.socials}>
-          {SITE.socials.map((so) => (
-            <li key={so.label}>
+          {socials.map((so, si) => (
+            <li key={`${si}-${so.label}`}>
               <a href={so.href} className={s.social} target="_blank" rel="noreferrer noopener">
                 {t.has(`socials.${so.label}`) ? t(`socials.${so.label}`) : so.label}
               </a>

@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { TEAM, instagramUrl } from "@/shared/content/team";
+import { instagramUrl } from "@/shared/content/team";
+import { getTeam } from "@/shared/data/team";
 import { FishMark } from "@/shared/ui/FishMark";
 
 interface AboutSection {
@@ -10,12 +11,13 @@ interface AboutSection {
 /**
  * /about. The studio's statement, set as a long read: one big headline, then
  * numbered sections with a hairline between them, then the team. Copy lives in
- * messages/<locale>/about.json (both locales: the live site's statement); the team in
- * shared/content/team.ts.
+ * messages/<locale>/about.json (both locales: the live site's statement); the team comes
+ * from /admin (shared/data/team.ts getTeam, code defaults in shared/content/team.ts).
  */
 export async function AboutPage() {
   const locale = await getLocale();
   const t = await getTranslations("about");
+  const team = await getTeam();
   const sections = t.raw("sections") as AboutSection[];
   const num = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
   const lang = locale === "fa" ? "fa" : "en";
@@ -58,12 +60,13 @@ export async function AboutPage() {
         </section>
       ))}
 
+      {team.length > 0 && (
       <section className="ab-team" aria-labelledby="ab-team">
         <h2 className="ab-team-h" id="ab-team">
           {t("team.heading")}
         </h2>
         <ul className="ab-grid">
-          {TEAM.map((m, i) => (
+          {team.map((m, i) => (
             <li key={m.id} className="ab-member" style={{ ["--i" as string]: i }}>
               <div className="ab-photo">
                 {m.photo ? (
@@ -95,6 +98,7 @@ export async function AboutPage() {
           ))}
         </ul>
       </section>
+      )}
 
       <p className="ab-fine">{t("fine")}</p>
     </main>

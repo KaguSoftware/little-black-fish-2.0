@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { formatNumber, pick, pickStrict } from "@/shared/data/localize";
-import { PAYMENT_LINKS, parseSupportBody, paymentOrder } from "@/shared/data/support";
+import { getSettings } from "@/shared/data/settings";
+import { SETTING_DEFAULTS } from "@/shared/data/settingsSchema";
+import { parseSupportBody, paymentOrder } from "@/shared/data/support";
 import type { ProjectRow } from "@/shared/data/types";
 import { EnamadSeal } from "@/shared/ui/EnamadSeal";
 import { resolveSupport } from "./resolve";
@@ -16,6 +18,20 @@ type Props = { locale: string; projects: ProjectRow[]; active: ProjectRow | null
 export async function SupportPage({ locale, projects, active }: Props) {
   const t = await getTranslations("support");
   const tc = await getTranslations("common");
+  const { payments } = await getSettings();
+  // Known methods (worldwide, iran) lead in locale order with their localized copy; a label edited in
+  // /admin overrides it. Extra methods added in /admin follow, showing their own label.
+  const known = paymentOrder(locale);
+  const defaultLabel = (key: string) => SETTING_DEFAULTS.payments.find((p) => p.key === key)?.label;
+  const rows = [
+    ...known.flatMap((key) => {
+      const p = payments.find((x) => x.key === key);
+      return p ? [{ key, href: p.href, label: p.label && p.label !== defaultLabel(key) ? p.label : t(`${key}.label`), heading: t(`${key}.heading`), caption: t(`${key}.caption`) }] : [];
+    }),
+    ...payments
+      .filter((p) => !(known as string[]).includes(p.key))
+      .map((p) => ({ key: p.key, href: p.href, label: p.label || p.key, heading: "", caption: "" })),
+  ];
   const { title, intro } = resolveSupport(active, locale, { title: t("studioTitle"), intro: t("studioIntro") });
   const sections = active ? parseSupportBody(pickStrict(active, "support_body", locale)) : [];
   const closing = active ? pickStrict(active, "support_closing", locale) : null;
@@ -89,27 +105,28 @@ export async function SupportPage({ locale, projects, active }: Props) {
         </blockquote>
       )}
 
+      {rows.length > 0 && (
       <section className="sp-pay" aria-labelledby="sp-choose">
         <h2 id="sp-choose" className="sp-choose">
           {t("chooseHeading")}
         </h2>
         <ul className="sp-list">
-          {paymentOrder(locale).map((method, i) => (
-            <li key={method} className="sp-row" style={{ ["--i" as string]: i }}>
-              <a className="sp-link" href={PAYMENT_LINKS[method]} target="_blank" rel="noopener noreferrer">
+          {rows.map((method, i) => (
+            <li key={method.key} className="sp-row" style={{ ["--i" as string]: i }}>
+              <a className="sp-link" href={method.href} target="_blank" rel="noopener noreferrer">
                 <span className="sp-num" aria-hidden="true">
                   {pad.format(i + 1)}
                 </span>
                 <span className="sp-main">
-                  <span className="sp-kicker">{t(`${method}.heading`)}</span>
+                  {method.heading && <span className="sp-kicker">{method.heading}</span>}
                   <span className="sp-label">
-                    <span className="sp-cut sp-cut-rest lowres">{t(`${method}.label`)}</span>
+                    <span className="sp-cut sp-cut-rest lowres">{method.label}</span>
                     <span className="sp-cut sp-cut-heal" aria-hidden="true">
-                      {t(`${method}.label`)}
+                      {method.label}
                     </span>
                   </span>
                 </span>
-                <span className="sp-note">{t(`${method}.caption`)}</span>
+                {method.caption && <span className="sp-note">{method.caption}</span>}
                 <span className="sp-arrow" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M7 17L17 7M9 7h8v8" />
@@ -121,6 +138,7 @@ export async function SupportPage({ locale, projects, active }: Props) {
           ))}
         </ul>
       </section>
+      )}
 
       <footer className="sp-fine">
         <div className="sp-fine-text">

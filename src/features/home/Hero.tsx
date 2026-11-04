@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useTranslations } from "next-intl";
+import { useSiteData } from "@/shared/data/SiteData";
 import { pointer } from "@/shared/lib/pointer";
 import { clamp } from "@/shared/lib/math";
 import { useUI } from "@/shared/state/store";
@@ -13,8 +14,6 @@ import s from "./home.module.css";
 
 const LanternScene = dynamic(() => import("./LanternScene"), { ssr: false });
 
-/** The wordmark is the brand mark: Latin in every locale (the erosion needs Redaction). */
-const LINES = ["Little", "Black", "Fish"] as const;
 
 /** A touch that stays put this long becomes a hold; moving further first means it was a scroll. */
 const HOLD_MS = 180;
@@ -22,11 +21,22 @@ const HOLD_SLOP = 10;
 /** Set once someone has held the light, so the hint stops teaching it. */
 const TAUGHT_KEY = "lbf:held-light";
 
-function WordLines() {
+/** The wordmark is the brand mark: Latin in every locale (the erosion needs Redaction). One word per line, from the studio name. */
+function WordLines({ name }: { name: string }) {
+  const lines = name.split(/\s+/).filter(Boolean);
+  // The layout is designed for exactly three words (one per line). Any other name stays in a
+  // single, wrapping line instead of breaking the stack.
+  if (lines.length !== 3) {
+    return (
+      <span className={`${s.wordLine} ${s.wordLineWrap}`} aria-hidden>
+        {lines.join(" ")}
+      </span>
+    );
+  }
   return (
     <>
-      {LINES.map((l) => (
-        <span key={l} className={s.wordLine} aria-hidden>
+      {lines.map((l, i) => (
+        <span key={`${l}-${i}`} className={s.wordLine} aria-hidden>
           {l}
         </span>
       ))}
@@ -45,6 +55,7 @@ function WordLines() {
  * still scrolls.
  */
 export function Hero({ onCue }: { onCue: () => void }) {
+  const { heroVideos, studio } = useSiteData();
   const heroRef = useRef<HTMLElement>(null);
   const handRef = useRef<HTMLDivElement>(null);
   const cleanRef = useRef<HTMLHeadingElement>(null);
@@ -237,17 +248,17 @@ export function Hero({ onCue }: { onCue: () => void }) {
       onPointerCancel={onPointerUp}
     >
       <motion.div className={s.heroCanvas} style={{ opacity: canvasOpacity }} aria-hidden>
-        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} />
+        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} videos={heroVideos.map((v) => v.src)} />
       </motion.div>
 
       <motion.div className={s.heroContent} style={{ opacity: contentOpacity, y: contentShift }}>
         {/* Eroded name, everywhere. */}
         <div ref={erodedRef} className={`${s.wordLayer} ${s.wordEroded}`} aria-hidden>
-          <WordLines />
+          <WordLines name={studio.name} />
         </div>
         {/* Clean name, only where the light falls. */}
         <h1 ref={cleanRef} className={`${s.wordLayer} ${s.wordClean}`}>
-          <WordLines />
+          <WordLines name={studio.name} />
           {/* Last, so .wordLine:first-child still matches "Little". */}
           <span className="sr-only">{t("name")}</span>
         </h1>

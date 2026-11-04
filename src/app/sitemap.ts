@@ -2,14 +2,16 @@ import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import { SERIES_SLUG } from "@/shared/data/cards";
 import { getSitemapData } from "@/shared/data/public";
+import { getSettings } from "@/shared/data/settings";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://littleblackfishstudios.com";
 const STATIC_ROUTES = ["", "/projects", "/projects/series", "/about", "/contact", "/support"];
 
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { projects, categories } = await getSitemapData();
+  const { studio } = await getSettings();
+  const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? studio.url).replace(/\/+$/, "");
   const now = new Date();
 
   // Every route in both locales, each entry listing its other-language alternate.

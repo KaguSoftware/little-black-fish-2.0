@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
@@ -8,6 +8,7 @@ import { formatNumber } from "@/shared/data/localize";
 import type { ActionResult } from "@/shared/data/types";
 import type { ReorderTable } from "@/shared/actions/admin/types";
 import { reorder } from "@/shared/actions/admin/reorder";
+import { EditorDirtyContext } from "./EditorShell";
 import { DownIcon, GripIcon, Thumb, UpIcon, type Notify, type ThumbKind } from "./parts";
 
 const SortableList = dynamic(() => import("./SortableList"), {
@@ -58,9 +59,19 @@ interface Props<T extends { id: string; order: number }> {
   showThumb?: boolean;
   isActive: (row: T) => boolean;
   view: (row: T) => RowView;
-  onToggle: (id: string, next: boolean) => Promise<ActionResult>;
-  onDelete: (id: string) => Promise<ActionResult>;
+  /** Omit when rows have no public on/off effect (series chapters): no toggle button. */
+  onToggle?: (id: string, next: boolean) => Promise<ActionResult>;
+  /** Omit for collections whose rows are fixed in code (series chapters, characters). */
+  onDelete?: (id: string) => Promise<ActionResult>;
+  /** Hide the Add button (default true). */
+  canAdd?: boolean;
+  /** Extra line under the panel heading. */
+  footnote?: ReactNode;
+  /** Heading level wrapper: render as a sub-panel without its own landmark focus. */
+  headingTag?: "h2" | "h3";
   renderEditor: (args: EditorArgs<T>) => ReactNode;
+  /** Reports unsaved work (an open editor with edits, or an unsaved reorder). */
+  onDirty?: (dirty: boolean) => void;
 }
 
 const sameIds = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -78,11 +89,15 @@ export function CollectionPanel<T extends { id: string; order: number }>({
   labelledBy,
   text,
   showThumb = true,
+  canAdd = true,
+  footnote,
+  headingTag: Heading = "h2",
   isActive,
   view,
   onToggle,
   onDelete,
   renderEditor,
+  onDirty,
 }: Props<T>) {
   const t = useTranslations("admin");
   const locale = useLocale();
@@ -98,6 +113,7 @@ export function CollectionPanel<T extends { id: string; order: number }>({
   const [removed, setRemoved] = useState<Set<string>>(() => new Set());
   const [busy, setBusy] = useState<Record<string, "toggle" | "delete" | undefined>>({});
   const [editing, setEditing] = useState<string | "new" | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
 
   const serverRows = useMemo(
     () => [...rows].sort((a, b) => a.order - b.order).filter((r) => !removed.has(r.id)),
@@ -162,6 +178,7 @@ export function CollectionPanel<T extends { id: string; order: number }>({
   };
 
   const toggle = async (row: T) => {
+    if (!onToggle) return;
     const next = !active(row);
     setActiveOverride((o) => ({ ...o, [row.id]: next }));
     setBusy((b) => ({ ...b, [row.id]: "toggle" }));
@@ -186,7 +203,7 @@ export function CollectionPanel<T extends { id: string; order: number }>({
   };
 
   const remove = async (row: T) => {
-    if (!window.confirm(text.confirmDelete(row))) return;
+    if (!onDelete || !window.confirm(text.confirmDelete(row))) return;
     setBusy((b) => ({ ...b, [row.id]: "delete" }));
     let res: ActionResult;
     try {
@@ -203,10 +220,16 @@ export function CollectionPanel<T extends { id: string; order: number }>({
     } else notify.fail(t("deleteFailed", { error: res.error }));
   };
 
-  const close = () => {
+  const anyDirty = editorDirty || (dirty && !awaitingSync);
+  useEffect(() => onDirty?.(anyDirty), [anyDirty, onDirty]);
+
+  const restoreFocus = () => {
     const back = editing && editing !== "new" ? `adm-edit-${editing}` : `adm-add-${table}`;
-    setEditing(null);
     requestAnimationFrame(() => document.getElementById(back)?.focus({ preventScroll: true }));
+  };
+  const close = () => {
+    restoreFocus();
+    setEditing(null);
   };
 
   const editingRow = editing && editing !== "new" ? (byId.get(editing) ?? null) : null;
@@ -232,8 +255,8 @@ export function CollectionPanel<T extends { id: string; order: number }>({
           </p>
           <p className="adm-row-meta">
             {!on && <span className="adm-off">{text.off}</span>}
-            {v.meta.map((m) => (
-              <span key={m}>{m}</span>
+            {v.meta.map((m, mi) => (
+              <span key={`${mi}-${m}`}>{m}</span>
             ))}
           </p>
         </div>
@@ -258,10 +281,12 @@ export function CollectionPanel<T extends { id: string; order: number }>({
               <DownIcon />
             </button>
           </span>
-          <button type="button" className="lbf-textbtn" onClick={() => toggle(row)} disabled={!!state} aria-busy={state === "toggle"}>
-            {on ? text.turnOff : text.turnOn}
-            <span className="sr-only">: {title}</span>
-          </button>
+          {onToggle && (
+            <button type="button" className="lbf-textbtn" onClick={() => toggle(row)} disabled={!!state} aria-busy={state === "toggle"}>
+              {on ? text.turnOff : text.turnOn}
+              <span className="sr-only">: {title}</span>
+            </button>
+          )}
           <button
             type="button"
             id={`adm-edit-${id}`}
@@ -273,52 +298,60 @@ export function CollectionPanel<T extends { id: string; order: number }>({
             {t("edit")}
             <span className="sr-only">: {title}</span>
           </button>
-          <button
-            type="button"
-            className="lbf-textbtn adm-danger"
-            onClick={() => remove(row)}
-            disabled={!!state}
-            aria-busy={state === "delete"}
-          >
-            {state === "delete" ? t("deleting") : t("delete")}
-            <span className="sr-only">: {title}</span>
-          </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="lbf-textbtn adm-danger"
+              onClick={() => remove(row)}
+              disabled={!!state}
+              aria-busy={state === "delete"}
+            >
+              {state === "delete" ? t("deleting") : t("delete")}
+              <span className="sr-only">: {title}</span>
+            </button>
+          )}
         </div>
       </div>
     );
   };
 
   return (
-    <section className="adm-panel" role="tabpanel" id={`adm-panel-${table}`} aria-labelledby={labelledBy} hidden={hidden}>
+    <section className="adm-panel" id={`adm-panel-${table}`} aria-labelledby={labelledBy} hidden={hidden} tabIndex={-1}>
       <div className="adm-panel-head">
         <div>
-          <h2 className="adm-h2">{text.title}</h2>
+          <Heading className="adm-h2">{text.title}</Heading>
           <p className="adm-sub">{text.sub}</p>
         </div>
-        <button
-          type="button"
-          id={`adm-add-${table}`}
-          className="lbf-textbtn adm-add"
-          onClick={() => setEditing(editing === "new" ? null : "new")}
-          aria-expanded={editing === "new"}
-        >
-          {text.add}
-        </button>
+        {canAdd && (
+          <button
+            type="button"
+            id={`adm-add-${table}`}
+            className="lbf-textbtn adm-add"
+            onClick={() => setEditing(editing === "new" ? null : "new")}
+            aria-expanded={editing === "new"}
+          >
+            {text.add}
+          </button>
+        )}
       </div>
+      {footnote}
 
       <div className="adm-stage" data-editing={editorOpen ? "true" : "false"}>
         {editorOpen && (
           <div className="adm-editor" key={editing ?? "none"}>
+            <EditorDirtyContext.Provider value={setEditorDirty}>
             {renderEditor({
               row: editingRow,
               active: editingRow ? active(editingRow) : false,
               close,
               saved: (message) => {
                 notify.ok(message);
+                restoreFocus();
                 setEditing(null);
                 refresh();
               },
             })}
+            </EditorDirtyContext.Provider>
           </div>
         )}
 

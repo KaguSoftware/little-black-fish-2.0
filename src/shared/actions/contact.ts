@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { createServiceClient } from "@/shared/supabase/server";
+import { getNotificationEmail } from "@/shared/data/settings";
 
 export type ContactField = "name" | "email" | "phone" | "message";
 export type ContactValues = Record<ContactField, string>;
@@ -102,12 +103,14 @@ export async function submitContact(_prev: ContactState, formData: FormData): Pr
 
     // 2. Email the studio. Failure is non-fatal and recorded on the row.
     const apiKey = process.env.RESEND_API_KEY;
-    const adminEmail = process.env.ADMIN_CONTACT_EMAIL;
+    // Recipient: admin setting contact.notificationEmail, env ADMIN_CONTACT_EMAIL as the fallback.
+    const configured = await getNotificationEmail();
+    const adminEmail = configured || process.env.ADMIN_CONTACT_EMAIL;
     const from = process.env.RESEND_FROM || "Contact Form <onboarding@resend.dev>";
 
     let emailError: string | null = null;
     if (!apiKey || !adminEmail) {
-      emailError = `env ${!apiKey ? "RESEND_API_KEY" : "ADMIN_CONTACT_EMAIL"} not set`;
+      emailError = `${!apiKey ? "env RESEND_API_KEY" : "notification email (setting contact.notificationEmail / env ADMIN_CONTACT_EMAIL)"} not set`;
     } else {
       try {
         const { error } = await new Resend(apiKey).emails.send({

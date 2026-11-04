@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { usePathname } from "@/i18n/navigation";
 import { animate, motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { SITE } from "@/shared/content/site";
+import { useSiteData } from "@/shared/data/SiteData";
 import { STILL_BY_ID, stillCard } from "@/shared/content/stills";
 import { SERIES_HREF, SERIES_SLUG, cardImage } from "@/shared/data/cards";
 import type { ProjectCard } from "@/shared/data/cards";
@@ -167,6 +168,7 @@ export function ArchivePage({
   back,
   showFeatured = true,
 }: ArchivePageProps) {
+  const { socials } = useSiteData();
   const t = useTranslations("archive");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -548,8 +550,8 @@ export function ArchivePage({
             {t("footCta")}
           </Link>
           <ul className="ar-socials">
-            {SITE.socials.map((s) => (
-              <li key={s.label}>
+            {socials.map((s, si) => (
+              <li key={`${si}-${s.label}`}>
                 <a href={s.href}>{s.label}</a>
               </li>
             ))}

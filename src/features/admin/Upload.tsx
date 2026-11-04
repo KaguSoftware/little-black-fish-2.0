@@ -16,6 +16,8 @@ interface Props {
   bucket: Bucket;
   label: string;
   hint?: string;
+  /** Validation error from the parent form; shown as an alert and marks the URL input invalid. */
+  error?: string;
   /**
    * "single": the field holds one URL (editable by hand) with a preview.
    * "add": each upload (or pasted URL) is handed to onChange and the field clears (gallery).
@@ -44,7 +46,7 @@ async function compressImage(file: File): Promise<File> {
  * Upload to Supabase Storage from the browser with the admin's session. Images are compressed
  * to WebP first; videos go up as-is. Also accepts a pasted URL.
  */
-export function Upload({ bucket, label, hint, mode = "single", value, onChange, imagesOnly }: Props) {
+export function Upload({ bucket, label, hint, error, mode = "single", value, onChange, imagesOnly }: Props) {
   const t = useTranslations("admin");
   const id = useId();
   const [state, setState] = useState<State>("idle");
@@ -155,7 +157,8 @@ export function Upload({ bucket, label, hint, mode = "single", value, onChange, 
             placeholder="https://"
             value={value ?? ""}
             onChange={(e) => onChange(e.target.value)}
-            aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}`}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}${error ? ` ${id}-err` : ""}`}
           />
         ) : (
           <>
@@ -174,7 +177,8 @@ export function Upload({ bucket, label, hint, mode = "single", value, onChange, 
                   addDraft();
                 }
               }}
-              aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}`}
+              aria-invalid={error ? true : undefined}
+            aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}${error ? ` ${id}-err` : ""}`}
             />
             <button type="button" className="lbf-textbtn" onClick={addDraft} disabled={!draft.trim()}>
               {t("upload.addUrl")}
@@ -212,6 +216,12 @@ export function Upload({ bucket, label, hint, mode = "single", value, onChange, 
             <img src={preview.src} alt="" />
           )}
         </div>
+      )}
+
+      {error && (
+        <span className="lbf-error" id={`${id}-err`} role="alert">
+          {error}
+        </span>
       )}
 
       <span className="adm-up-status" id={`${id}-status`} data-state={state} role={state === "error" ? "alert" : "status"}>

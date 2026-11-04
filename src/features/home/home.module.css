@@ -82,6 +82,11 @@
 .wordLine:first-child {
   flex-basis: 100%;
 }
+.wordLineWrap {
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
 
 .wordEroded {
   font-family: var(--font-display-100);

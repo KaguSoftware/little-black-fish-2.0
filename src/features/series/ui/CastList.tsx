@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { TELLERS, TELLER_IDS, tellerPortrait } from "@/shared/content/characters";
 import type { TellerId } from "@/shared/content/types";
+import { useSiteData } from "@/shared/data/SiteData";
 import { useSeries, useUI } from "@/shared/state/store";
 import { listVariants, tellerAccentCss } from "./lib/enter";
 import { scrollToTop } from "./lib/lenis";
@@ -19,6 +20,8 @@ import { tellerName } from "./lib/i18n";
  */
 export function CastList() {
   const tr = useTranslations("series");
+  const { hiddenTellers } = useSiteData();
+  const cast = TELLERS.filter((t) => !hiddenTellers.includes(t.id));
   const chapter = useSeries((s) => s.chapter);
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
@@ -51,7 +54,7 @@ export function CastList() {
           animate="show"
           exit="exit"
         >
-          {TELLERS.map((t, i) => {
+          {cast.map((t, i) => {
             const now = t.id === teller;
             const accent = tellerAccentCss(t.accent);
             const role = tr(`roles.${t.id}`);
@@ -111,7 +114,7 @@ export function CastList() {
                       {role}
                     </span>
                     <span className="mt-0.5 hidden text-[0.8rem] leading-snug lg:block" style={{ color: "var(--ink-dim)" }}>
-                      {tr(`moods.${t.mood}`)}
+                      {tr.has(`characterMoods.${t.id}`) ? tr(`characterMoods.${t.id}`) : tr(`moods.${t.mood}`)}
                     </span>
                     {now ? (
                       <span className="mt-1 block text-[0.78rem] font-medium" style={{ color: accent }}>
