@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { TELLERS } from "@/shared/content/characters";
+import { useRoster } from "@/shared/data/SiteData";
 import { oklchCss } from "@/shared/lib/color";
 import { clamp, damp, noise1, smoothstep, TAU } from "@/shared/lib/math";
 import { pointer } from "@/shared/lib/pointer";
@@ -26,6 +26,7 @@ export function FallbackEyes({
   engaged: { current: boolean };
   pupil: { current: PupilPoint };
 }) {
+  const roster = useRoster();
   const svgRef = useRef<SVGSVGElement>(null);
   const irisRefs = useRef<(SVGGElement | null)[]>([null, null]);
   const lidRefs = useRef<(SVGRectElement | null)[]>([null, null]);
@@ -120,10 +121,10 @@ export function FallbackEyes({
 
       // orbit ring
       const ang0 = calm ? 0.6 : t * (0.2 + surprise * 0.18);
-      for (let i = 0; i < TELLERS.length; i++) {
+      for (let i = 0; i < roster.length; i++) {
         const dot = dotRefs.current[i];
         if (!dot) continue;
-        const a = ang0 + (i * TAU) / TELLERS.length;
+        const a = ang0 + (i * TAU) / roster.length;
         const lx = Math.cos(a);
         const depth = Math.sin(a); // + = in front
         const ly = depth * 0.46;
@@ -147,7 +148,7 @@ export function FallbackEyes({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [pupil, active]);
+  }, [pupil, active, roster]);
 
   return (
     <svg
@@ -186,7 +187,7 @@ export function FallbackEyes({
           <path d={ALMOND} fill="none" stroke="oklch(0.62 0.04 80)" strokeOpacity="0.5" strokeWidth="2" />
         </g>
       ))}
-      {TELLERS.map((t, i) => (
+      {roster.map((t, i) => (
         <circle key={t.id} ref={(el) => void (dotRefs.current[i] = el)} r="6" fill={oklchCss([Math.min(0.86, t.accent[0] + 0.1), t.accent[1], t.accent[2]])} />
       ))}
     </svg>

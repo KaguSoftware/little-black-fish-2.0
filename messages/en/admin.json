@@ -273,6 +273,7 @@
       "team_delete": "Deleted a team member",
       "series_chapter_update": "Edited a chapter",
       "series_character_update": "Edited a character",
+      "series_character_look": "Changed a voice’s look",
       "series_chapters_show": "Showed a chapter",
       "series_chapters_hide": "Hid a chapter",
       "series_characters_show": "Showed a character",
@@ -461,7 +462,42 @@
     "unstoredNote": "Rows marked “built-in” have never been edited. Reordering or editing them stores them in the database.",
     "chaptersSub": "Chapter words and titles in both languages.",
     "chaptersNote": "Chapters are driven by the scene in code, so they cannot be hidden here. You can edit their words and titles and change their order.",
-    "charactersNote": "Hiding a character only removes them from the series page cast and switcher. The scene itself still contains them.",
+    "charactersNote": "Switch voices on or off and set their order. A hidden voice disappears everywhere on the site: the home eyes and reel, the lantern wall, the series switcher, cast list, 3D stage and narration. Models, camera and motion stay in code.",
+    "voices": {
+      "count": "{count, plural, =0 {No voices are shown on the site} one {1 voice is shown on the site} other {# voices are shown on the site}}",
+      "of": "of {total} in total",
+      "zero": "No voice is switched on. The home eyes and reel sections are hidden and the series page shows an empty state.",
+      "one": "Only one voice is on. The switcher and the cast list are hidden and the headline reads “One voice”.",
+      "order": "Order saved here sets the order on the site.",
+      "preview": "Preview on the site",
+      "previewFor": "Preview the series page (opens in a new tab)"
+    },
+    "look": {
+      "title": "Look",
+      "hint": "Portrait, accent color and stage tint. Empty means the built-in look.",
+      "portrait": "Portrait image",
+      "portraitHint": "Shown in the home reel, the series switcher and the cast list. Portrait 3:4 works best.",
+      "builtInPortrait": "Built-in portrait is used.",
+      "focus": "Focus point",
+      "focusHint": "Click the image to choose which part stays in view when it is cropped.",
+      "focusX": "Horizontal position, percent",
+      "focusY": "Vertical position, percent",
+      "focusPicker": "Portrait preview. Click to set the focus point.",
+      "cropReel": "Reel card",
+      "cropChip": "Switcher chip",
+      "cropList": "Cast list",
+      "accent": "Accent color",
+      "accentHint": "Tints the light, rim and dots for this voice.",
+      "hue": "Hue",
+      "lightness": "Lightness",
+      "chroma": "Chroma",
+      "swatch": "Accent preview",
+      "stageHue": "Stage hue",
+      "stageHint": "Background tint of the stage while this voice tells the story.",
+      "reset": "Reset to default",
+      "usingDefault": "Using the default",
+      "custom": "Custom"
+    },
     "charactersSub": "Names, roles, moods and narration lines.",
     "emptyTitle": "Nothing here",
     "emptyText": "No rows were found.",
@@ -469,6 +505,10 @@
     "turnOn": "Show",
     "turnOff": "Hide",
     "default": "built-in",
+    "state": {
+      "on": "Shown",
+      "off": "Hidden"
+    },
     "chapterSaved": "Chapter saved.",
     "characterSaved": "Character saved.",
     "editChapter": "Edit chapter {slug}",
@@ -525,5 +565,12 @@
     "confirmDelete": "Delete {name}? This can’t be undone.",
     "confirmDeleteUsed": "{name} is still used by {users}. Deleting it leaves broken images there. Delete anyway?",
     "deleted": "Deleted {name}."
+  },
+  "error": {
+    "title": "Something didn’t load.",
+    "body": "The admin couldn’t reach the database. Nothing you saved is lost. Try again in a moment.",
+    "retry": "Try again",
+    "login": "Back to sign in",
+    "reference": "Reference {id}"
   }
 }

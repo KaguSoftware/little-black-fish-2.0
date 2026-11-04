@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { chapterHoldEnd, chapterHoldStart, TYPE_WINDOW } from "@/shared/content/chapters";
-import { TELLER_IDS } from "@/shared/content/characters";
+import { activeIds } from "@/shared/content/roster";
 import type { ChapterId } from "@/shared/content/types";
 import { clamp, easeInOutCubic } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
@@ -103,8 +103,9 @@ export function Autoplay() {
 
           // THE OTHERS: hand the story to the next teller and replay from the top.
           const s = useSeries.getState();
-          const i = TELLER_IDS.indexOf(s.teller);
-          s.switchTeller(TELLER_IDS[(i + 1) % TELLER_IDS.length], "autoplay");
+          // Next visible voice in admin order (a single voice just replays itself).
+          const ids = activeIds();
+          if (ids.length > 1) s.switchTeller(ids[(ids.indexOf(s.teller) + 1) % ids.length], "autoplay");
           await sleep(1400);
           await glideTop(3.4);
           await sleep(600);

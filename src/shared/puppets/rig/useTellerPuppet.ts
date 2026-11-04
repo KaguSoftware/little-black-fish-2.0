@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Texture, TextureLoader } from "three";
 import { TELLER_BY_ID } from "../../content/characters";
+import { tellerView } from "../../content/roster";
 import { oklchToLinear } from "../../lib/color";
 import { useSeries, useUI } from "../../state/store";
 import { PUPPET_LOADERS } from "../registry";
@@ -55,7 +56,7 @@ export function loadTexture(url: string, opts?: { srgb?: boolean; repeat?: [numb
 }
 
 export function buildOptionsFor(id: TellerId, quality: "high" | "low"): BuildOptions {
-  return { quality, texture: loadTexture, accent: oklchToLinear(TELLER_BY_ID[id].accent) };
+  return { quality, texture: loadTexture, accent: oklchToLinear(tellerView(id).accent) };
 }
 
 /** Warm the code-split import (and the model, if the teller has one) before it's needed. */

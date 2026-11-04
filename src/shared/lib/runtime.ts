@@ -91,6 +91,13 @@ export interface FrameParams {
 const zeroWeights = () =>
   Object.fromEntries(TELLER_IDS.map((id) => [id, id === FIRST_TELLER ? 1 : 0])) as Record<TellerId, number>;
 
+/** Make `id` the only teller on stage (used when the roster changes and the current one is gone). */
+export function resetTellerWeights(id: TellerId) {
+  const w = runtime.frame.weights;
+  for (const k of Object.keys(w) as TellerId[]) w[k] = k === id ? 1 : 0;
+  runtime.frame.teller = id;
+}
+
 export const runtime = {
   /** Raw (unsmoothed) story progress from scroll. */
   rawProgress: 0,

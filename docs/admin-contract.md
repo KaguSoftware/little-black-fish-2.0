@@ -58,6 +58,7 @@ Shapes/defaults/validation in `src/shared/data/settingsSchema.ts`. `saveSettings
 | `seo` | `{title, description, ogImage}` | all "" = use messages `common.studio`/`common.description`, no OG image; ogImage http(s) or `/path` |
 | `series` | `{title, year, url}` | `SITE.series*`; url http(s), `/path` or `#anchor` |
 | `heroVideos` | `{src, title, project}[]` (max 12) | `HERO_VIDEOS`; src `/path` or http(s); project = project slug |
+| `tellers` | `Record<TellerId, {portrait?, focus?: [x,y], accent?: [l,c,h], stageHue?}>` | default `{}` (= code look). portrait `/path`/http(s); focus 0..100 %; accent l 0.2..0.95, c 0..0.37, h 0..360; stageHue 0..360; unknown slugs rejected; empty looks dropped. Written by `updateSeriesCharacter({look})`, not by the Settings panel |
 
 ```ts
 saveSettings<K extends SettingKey>(key: K, value: Settings[K]): Promise<ActionResult>
@@ -87,6 +88,16 @@ interface SeriesCharacterInput { nameEn; nameFa; roleEn?; roleFa?; moodEn?; mood
 Slugs must be known to code (unknown -> error); rows are upserted so un-seeded rows get created. `narration*` keys: `hello world day did others` (others ignored).
 Public: `getSeriesContent(): Promise<{chapters: SeriesChapterRow[]; characters: SeriesCharacterRow[]}>` (`src/shared/data/series.ts`): visible, ordered; slugs missing from DB are filled from `CHAPTER_DEFAULTS`/`CHARACTER_DEFAULTS`; never throws. Consumers join by `slug` to `CHAPTERS`/`TELLERS` and use the row text in place of `series.json`/code text. Hiding a chapter or character only removes it from this list: the 3D scene/segments are code-driven, so consumers decide what hiding means.
 
+## Voices (roster): who is on the site
+
+Single source of truth for the six tellers ("voices"). `series_characters` (`visible`, `order`, text) + `site_settings.tellers` (look) + code (models, eyelines, plates, moods).
+- Isomorphic: `src/shared/content/roster.ts` (`RosterEntry`, `rosterFrom`, `buildRoster`, `countWord`, registry `activeTellers()/activeIds()/tellerView(id)`).
+- Server loader: `getRoster(): Promise<RosterEntry[]>` (`src/shared/data/roster.ts`): visible voices in admin order, never throws, DB failure = all six defaults, may be `[]`. The locale layout puts it in `SiteData.roster`; client components use `useRoster()` (`SiteData.tsx`). The `SiteDataProvider` mirrors it into the module registry (client only) for non-React code (director, runtime, lantern, Cast, Autoplay). R3F canvases do not see React context: pass the roster as props or read the registry.
+- `updateSeriesCharacter(slug, {..., look?})`: `look` undefined = untouched, `null`/`{}` = back to defaults; read-modify-write of that slug inside the shared `tellers` row; audits `series.character.look` + `series.character.update`; invalidates `series` and `site-settings`.
+- Behavior by count N (visible voices): home eyes ring dots = N (accents from the roster), reel = N frames, lantern wall drops stills whose voices are all hidden, headline uses `home.reel.title` with `{count}` as a word (en/fa 0..12, digits beyond) and `titleOne`/`labelOne` for N = 1; N = 0 removes the eyes and reel sections (and the hero cue scrolls to "Other work") and the series page shows the `series.empty` state. Series: switcher hidden for N < 2, cast list (THE OTHERS) hidden for N < 2, `castFor(teller, chapter, ids)` only places visible others, Autoplay hands over to the next visible voice (N = 1 replays), the stage remounts (`key`) when the roster changes, and if the current teller was hidden the first visible one takes over (`resetTellerWeights`). The Snake King owns the home eyes; if he is hidden the first visible voice lends his puppet and accent.
+- Admin: Series > Voices (default tab): show/hide, drag/up-down reorder (existing `reorder` upsert), live count + warnings, per-voice editor with look (portrait upload to `projects`, focus picker with reel/chip/list crops, accent OKLCH sliders, stage hue, reset), preview link. Chapters tab keeps word/title editing.
+- Not covered: the archive page tagline `archive.featuredSub` ("Six tellers, one story.") and `series.metaDescription` ("six points of view") are static copy (editable in Page copy); PuppetLab (dev tool) still lists all six.
+
 ## Media (`media.ts`)
 ```ts
 listMedia(bucket: "projects"|"hero"): Promise<ActionResult<MediaItem[]>>   // root of bucket, newest first, max 1000
@@ -103,7 +114,7 @@ Existing: `projects, heroSlides, categories, submissions`. New:
 `teamMembers: TeamMemberRow[]` (all, ordered), `seriesChapters`, `seriesCharacters` (all rows incl. hidden; empty if never seeded), `settings: Settings` (effective), `settingsStored: string[]` (keys with a stored row), `content: ContentEntry[]`, `audit: AdminAuditRow[]` (latest 50, newest first).
 
 ## Audit actions written
-`content.save`, `content.reset`, `settings.save`, `team.create|update|show|hide|delete`, `series.chapter.update`, `series.character.update`, `series_chapters.show|hide`, `series_characters.show|hide`, `media.delete`. (The pre-existing projects/hero/categories/submissions actions do not write audit rows yet.)
+`content.save`, `content.reset`, `settings.save`, `team.create|update|show|hide|delete`, `series.chapter.update`, `series.character.update`, `series.character.look`, `series_chapters.show|hide`, `series_characters.show|hide`, `media.delete`. (The pre-existing projects/hero/categories/submissions actions do not write audit rows yet.)
 
 ## Public components still to rewire (not done by this layer)
 `SITE.*`/`PAYMENT_LINKS`/`HERO_VIDEOS` call sites (Footer, Maker, ArchivePage, WatchButton, SupportPage, LanternScene), `TEAM` in AboutPage, `TELLERS`/`CHAPTERS` text in the series UI, root layout `generateMetadata` (use `settings.seo`/`studio`). Server components call `getSettings()`/`getTeam()`/`getSeriesContent()` and pass data down; client components need props.

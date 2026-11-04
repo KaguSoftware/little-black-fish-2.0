@@ -3,6 +3,7 @@
  * can import defaults/validators; the server action re-validates anyway).
  */
 import { SITE } from "@/shared/content/site";
+import { TELLER_IDS } from "@/shared/content/characters";
 import { HERO_VIDEOS } from "./hero";
 import { PAYMENT_LINKS } from "./support";
 
@@ -52,6 +53,22 @@ export interface HeroVideo {
   project: string;
 }
 
+/**
+ * Per-voice look, keyed by teller slug (TellerId). Every field is optional: missing = the code
+ * default (portrait /portraits/{id}.webp, accent/stage hue from characters.ts).
+ */
+export interface TellerLook {
+  /** Uploaded portrait: site-relative path or http(s) URL. */
+  portrait?: string;
+  /** Focus point on the portrait in percent [x, y] (object-position). */
+  focus?: [number, number];
+  /** Accent colour override, OKLCH [l 0.2..0.95, c 0..0.37, h 0..360]. */
+  accent?: [number, number, number];
+  /** Stage tint hue override (degrees), used for every chapter. */
+  stageHue?: number;
+}
+export type TellersSettings = Record<string, TellerLook>;
+
 export interface Settings {
   studio: StudioSettings;
   socials: SocialLink[];
@@ -60,6 +77,7 @@ export interface Settings {
   seo: SeoSettings;
   series: SeriesSettings;
   heroVideos: HeroVideo[];
+  tellers: TellersSettings;
 }
 export type SettingKey = keyof Settings;
 export const SETTING_KEYS = [
@@ -70,6 +88,7 @@ export const SETTING_KEYS = [
   "seo",
   "series",
   "heroVideos",
+  "tellers",
 ] as const satisfies readonly SettingKey[];
 
 const PAYMENT_LABELS: Record<string, string> = { worldwide: "Support in Dollars", iran: "Support in Rial" };
@@ -89,6 +108,7 @@ export const SETTING_DEFAULTS: Settings = {
   seo: { title: "", description: "", ogImage: "" },
   series: { title: SITE.seriesTitle, year: SITE.seriesYear, url: SITE.seriesUrl },
   heroVideos: HERO_VIDEOS.map((v) => ({ src: v.src, title: v.title, project: v.project })),
+  tellers: {},
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -174,6 +194,23 @@ function fields<T extends object>(parts: { [K in keyof T]: Result<T[K]> }): Resu
   return ok(out);
 }
 
+function num(v: unknown, field: string, min: number, max: number): Result<number> {
+  if (typeof v !== "number" || !Number.isFinite(v)) return bad(`${field} must be a number`);
+  if (v < min || v > max) return bad(`${field} must be between ${min} and ${max}`);
+  return ok(Math.round(v * 1000) / 1000);
+}
+
+function tuple(v: unknown, field: string, ranges: [number, number][]): Result<number[]> {
+  if (!Array.isArray(v) || v.length !== ranges.length) return bad(`${field} is invalid`);
+  const out: number[] = [];
+  for (let i = 0; i < ranges.length; i++) {
+    const r = num(v[i], field, ranges[i][0], ranges[i][1]);
+    if (!r.ok) return r;
+    out.push(r.value);
+  }
+  return ok(out);
+}
+
 const VALIDATORS: { [K in SettingKey]: (v: unknown) => Result<Settings[K]> } = {
   studio(v) {
     if (!isObj(v)) return bad("studio is invalid");
@@ -222,6 +259,35 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => Result<Settings[K]> } = {
       year: str(v.year, "Series year", 20),
       url: urlOrPath(v.url, "Series URL", true),
     });
+  },
+  tellers(v) {
+    if (!isObj(v)) return bad("tellers is invalid");
+    const out: TellersSettings = {};
+    for (const [slug, raw] of Object.entries(v)) {
+      if (!(TELLER_IDS as string[]).includes(slug)) return bad(`Unknown voice "${slug}"`);
+      if (!isObj(raw)) return bad(`${slug} look is invalid`);
+      const look: TellerLook = {};
+      const portrait = urlOrPath(raw.portrait, `${slug} portrait`);
+      if (!portrait.ok) return portrait;
+      if (portrait.value) look.portrait = portrait.value;
+      if (raw.focus != null) {
+        const f = tuple(raw.focus, `${slug} focus point`, [[0, 100], [0, 100]]);
+        if (!f.ok) return f;
+        look.focus = f.value as [number, number];
+      }
+      if (raw.accent != null) {
+        const a = tuple(raw.accent, `${slug} accent`, [[0.2, 0.95], [0, 0.37], [0, 360]]);
+        if (!a.ok) return a;
+        look.accent = a.value as [number, number, number];
+      }
+      if (raw.stageHue != null) {
+        const h = num(raw.stageHue, `${slug} stage hue`, 0, 360);
+        if (!h.ok) return h;
+        look.stageHue = h.value;
+      }
+      if (Object.keys(look).length) out[slug] = look;
+    }
+    return ok(out);
   },
   heroVideos: (v) =>
     list<HeroVideo>(v, "Hero videos", 12, (it, l) =>

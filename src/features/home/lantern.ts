@@ -1,4 +1,4 @@
-import { TELLERS } from "@/shared/content/characters";
+import { activeTellers, type RosterTeller } from "@/shared/content/roster";
 import { mixLab, oklabCss, oklabToLinear, oklchToOklab } from "@/shared/lib/color";
 import type { Lab, RGB } from "@/shared/lib/color";
 import { clamp, lerp, noise1, smoothstep } from "@/shared/lib/math";
@@ -9,7 +9,18 @@ import { clamp, lerp, noise1, smoothstep } from "@/shared/lib/math";
  * Never React state. Coordinates are hero-local CSS pixels (origin top-left).
  */
 
-const LABS: Lab[] = TELLERS.map((t) => oklchToOklab(t.accent));
+/** Accent colours of the visible voices (admin roster); a neutral lantern when none is shown. */
+const FALLBACK_LAB: Lab = oklchToOklab([0.7, 0.1, 210]);
+let labsFor: readonly RosterTeller[] | null = null;
+let labsCache: Lab[] = [FALLBACK_LAB];
+function labs(): Lab[] {
+  const a = activeTellers();
+  if (a !== labsFor) {
+    labsFor = a;
+    labsCache = a.length ? a.map((t) => oklchToOklab(t.accent)) : [FALLBACK_LAB];
+  }
+  return labsCache;
+}
 /** Seconds the light rests on one teller's colour before sliding to the next. */
 const COLOUR_PERIOD = 8;
 
@@ -65,8 +76,8 @@ export interface LanternTickInput {
 }
 
 const tmpLab: Lab = [0, 0, 0];
-const entriesA = { lab: LABS[0], w: 1 };
-const entriesB = { lab: LABS[1], w: 0 };
+const entriesA = { lab: FALLBACK_LAB, w: 1 };
+const entriesB = { lab: FALLBACK_LAB, w: 0 };
 const pair = [entriesA, entriesB];
 
 export function sizeLantern(w: number, h: number) {
@@ -146,7 +157,8 @@ export function tickLantern(i: LanternTickInput) {
     minDim * 0.34 * (1 + 0.5 * L.hold) * (1 + breathe + flicker) * clamp(i.fade, 0, 1),
   );
 
-  // ── colour walks the six teller accents ──
+  // ── colour walks the accents of the visible voices ──
+  const LABS = labs();
   if (i.reduced) {
     L.tellerIndex = 0;
     tmpLab[0] = LABS[0][0];

@@ -4,11 +4,12 @@ import Lenis from "lenis";
 import { useCallback, useEffect, useRef } from "react";
 import type { ProjectCard } from "@/shared/data/cards";
 import { useUI } from "@/shared/state/store";
+import { useRoster } from "@/shared/data/SiteData";
 import { EyesCTA } from "./EyesCTA";
 import { Footer } from "./Footer";
 import { Hero } from "./Hero";
 import { OtherWork } from "./OtherWork";
-import { REEL_COUNT, ReelStrip } from "./ReelStrip";
+import { ReelStrip, useReelFrames } from "./ReelStrip";
 import s from "./home.module.css";
 
 const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
@@ -30,6 +31,9 @@ export function HomePage({ projects }: { projects: ProjectCard[] }) {
   const paused = useUI((st) => st.paused);
   const lenisRef = useRef<Lenis | null>(null);
   const userActed = useRef(false);
+  // Voices switched off in /admin leave the eyes and the reel; none left = both sections go.
+  const REEL_COUNT = useReelFrames().length;
+  const hasVoices = useRoster().length > 0;
 
   useEffect(() => {
     if (reduced) return;
@@ -81,14 +85,16 @@ export function HomePage({ projects }: { projects: ProjectCard[] }) {
       if (!el) return 0;
       const top = el.getBoundingClientRect().top + window.scrollY;
       const span = el.offsetHeight - window.innerHeight;
-      return top + (frame / (REEL_COUNT - 1)) * span;
+      return top + (frame / Math.max(1, REEL_COUNT - 1)) * span;
     };
 
     let t = 15000;
-    at(t, () => scrollToId("eyes", 3));
-    t += 12500;
-    at(t, () => scrollToId("reel", 3.2));
-    t += 6200;
+    if (hasVoices) {
+      at(t, () => scrollToId("eyes", 3));
+      t += 12500;
+      at(t, () => scrollToId("reel", 3.2));
+      t += 6200;
+    }
     for (let i = 1; i < REEL_COUNT; i++) {
       const frame = i;
       at(t, () => scrollToY(reelY(frame), 1.3));
@@ -98,14 +104,14 @@ export function HomePage({ projects }: { projects: ProjectCard[] }) {
     at(t, () => scrollToId("work", 2.8));
 
     return () => timers.forEach((id) => window.clearTimeout(id));
-  }, [reduced, paused, scrollToId, scrollToY]);
+  }, [reduced, paused, scrollToId, scrollToY, REEL_COUNT, hasVoices]);
 
   return (
     <>
       <main id="main" className={s.page}>
-        <Hero onCue={() => scrollToId("eyes", 2.2)} />
-        <EyesCTA />
-        <ReelStrip />
+        <Hero onCue={() => scrollToId(hasVoices ? "eyes" : "work", 2.2)} />
+        {hasVoices && <EyesCTA />}
+        {hasVoices && <ReelStrip />}
         <OtherWork projects={projects} />
       </main>
       <Footer />

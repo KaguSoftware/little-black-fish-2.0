@@ -2,8 +2,10 @@
 
 import { AnimatePresence, motion, useScroll } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
-import { TELLER_BY_ID, tellerPortrait } from "@/shared/content/characters";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRoster } from "@/shared/data/SiteData";
+import { countWord } from "@/shared/content/roster";
+import type { TellerId } from "@/shared/content/types";
 import { STILL_BY_ID, stillCard } from "@/shared/content/stills";
 import type { StillId } from "@/shared/content/types";
 import { oklchCss } from "@/shared/lib/color";
@@ -12,9 +14,20 @@ import { useUI } from "@/shared/state/store";
 import { tellerName } from "@/features/series/ui/lib/i18n";
 import s from "./home.module.css";
 
-/** One frame per teller voice. */
-export const REEL_FRAMES: StillId[] = ["s09", "s08", "s04", "s15", "s12", "s23"];
-export const REEL_COUNT = REEL_FRAMES.length;
+/** One frame per teller voice (the still that opens that voice). */
+const REEL_STILL: Record<TellerId, StillId> = {
+  child: "s09",
+  elder: "s08",
+  "snake-king": "s04",
+  "silver-one": "s15",
+  "masked-lady": "s12",
+  creature: "s23",
+};
+/** The reel frames for the visible voices, in admin order: one per voice. */
+export function useReelFrames(): StillId[] {
+  const roster = useRoster();
+  return useMemo(() => roster.map((t) => REEL_STILL[t.id]), [roster]);
+}
 /** Scroll distance per frame, in viewport heights. */
 export const REEL_VH_PER_FRAME = 0.55;
 
@@ -34,6 +47,10 @@ const STEP = 1000 / FPS;
  * Reduced motion: the strip glides smoothly, with no weave, flicker or scratches.
  */
 export function ReelStrip() {
+  const roster = useRoster();
+  const REEL_FRAMES = useReelFrames();
+  const REEL_COUNT = REEL_FRAMES.length;
+  const LAST = Math.max(1, REEL_COUNT - 1);
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const weaveRef = useRef<HTMLDivElement>(null);
@@ -81,6 +98,7 @@ export function ReelStrip() {
     let lastNow = 0;
     let lastTick = -1;
     let display = scrollYProgress.get() * (REEL_COUNT - 1);
+    if (REEL_COUNT <= 1) display = 0;
     let speed = 0;
     let lastFrameIdx = -1;
 
@@ -158,10 +176,11 @@ export function ReelStrip() {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [inView, scrollYProgress]);
+  }, [inView, scrollYProgress, REEL_COUNT]);
 
-  const still = STILL_BY_ID[REEL_FRAMES[index]];
-  const teller = TELLER_BY_ID[still.tellers[0]];
+  const at = Math.min(index, REEL_COUNT - 1);
+  const teller = roster[at];
+  if (!teller) return null;
   const accent = oklchCss(teller.accent);
 
   return (
@@ -170,10 +189,10 @@ export function ReelStrip() {
       ref={sectionRef}
       className={s.reel}
       style={{ height: `calc(100svh + ${(REEL_COUNT - 1) * REEL_VH_PER_FRAME * 100}svh)` }}
-      aria-label={t("label")}
+      aria-label={REEL_COUNT === 1 ? t("labelOne") : t("label", { count: countWord(REEL_COUNT, locale) })}
     >
       <div className={s.reelPin} style={{ ["--gate" as string]: accent }}>
-        <h2 className={s.reelTitle}>{t("title")}</h2>
+        <h2 className={s.reelTitle}>{REEL_COUNT === 1 ? t("titleOne") : t("title", { count: countWord(REEL_COUNT, locale) })}</h2>
 
         <div className={s.reelWindow}>
           <div ref={weaveRef} className={s.reelWeave}>
@@ -228,7 +247,7 @@ export function ReelStrip() {
                 key={id}
                 className={s.reelProgressTick}
                 data-passed={i <= index || undefined}
-                style={{ left: `${(i / (REEL_COUNT - 1)) * 100}%` }}
+                style={{ left: `${(i / LAST) * 100}%` }}
               />
             ))}
           </div>
@@ -246,7 +265,15 @@ export function ReelStrip() {
             >
               <span className={s.reelFace}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tellerPortrait(teller.id)} alt="" width={40} height={53} loading="lazy" decoding="async" />
+                <img
+                  src={teller.portraitUrl}
+                  alt=""
+                  width={40}
+                  height={53}
+                  loading="lazy"
+                  decoding="async"
+                  style={{ objectPosition: `${teller.portraitFocus[0]}% ${teller.portraitFocus[1]}%` }}
+                />
               </span>
               <span className={s.reelName}>
                 {t("caption", { name: tellerName(ts, teller.id, teller.name), role: ts(`roles.${teller.id}`) })}

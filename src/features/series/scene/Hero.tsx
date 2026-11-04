@@ -4,6 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Vector3 } from "three";
 import { TELLER_IDS } from "@/shared/content/characters";
+import { activeIds } from "@/shared/content/roster";
 import type { TellerId } from "@/shared/content/types";
 import { bell, clamp, damp, smootherstep, smoothstep } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
@@ -90,7 +91,8 @@ export function Hero() {
 
   // Warm code-split builders for everything that has been requested.
   useEffect(() => {
-    for (const id of TELLER_IDS) if (requested[id]) preloadTeller(id);
+    // Only voices that are switched on in /admin ever get built.
+    for (const id of activeIds()) if (requested[id]) preloadTeller(id);
   }, [requested]);
 
   // Presence crossfade + shared inputs. Priority -50: after the director (-100), before every controller (0).

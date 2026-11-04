@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useTranslations } from "next-intl";
-import { useSiteData } from "@/shared/data/SiteData";
+import { useRoster, useSiteData } from "@/shared/data/SiteData";
 import { pointer } from "@/shared/lib/pointer";
 import { clamp } from "@/shared/lib/math";
 import { useUI } from "@/shared/state/store";
@@ -56,6 +56,7 @@ function WordLines({ name }: { name: string }) {
  */
 export function Hero({ onCue }: { onCue: () => void }) {
   const { heroVideos, studio } = useSiteData();
+  const roster = useRoster();
   const heroRef = useRef<HTMLElement>(null);
   const handRef = useRef<HTMLDivElement>(null);
   const cleanRef = useRef<HTMLHeadingElement>(null);
@@ -248,7 +249,7 @@ export function Hero({ onCue }: { onCue: () => void }) {
       onPointerCancel={onPointerUp}
     >
       <motion.div className={s.heroCanvas} style={{ opacity: canvasOpacity }} aria-hidden>
-        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} videos={heroVideos.map((v) => v.src)} />
+        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} videos={heroVideos.map((v) => v.src)} roster={roster} />
       </motion.div>
 
       <motion.div className={s.heroContent} style={{ opacity: contentOpacity, y: contentShift }}>

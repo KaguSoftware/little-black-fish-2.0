@@ -11,8 +11,10 @@
     "look": "Look closer"
   },
   "reel": {
-    "label": "Six voices, one story",
-    "title": "Six voices. One story.",
+    "label": "{count} voices, one story",
+    "labelOne": "One voice, one story",
+    "title": "{count} voices. One story.",
+    "titleOne": "One voice. One story.",
     "caption": "{name}, {role}"
   },
   "work": {

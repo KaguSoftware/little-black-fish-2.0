@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { pick } from "@/shared/data/localize";
+import { getPathname } from "@/i18n/navigation";
+import { TELLER_BY_ID } from "@/shared/content/characters";
+import { tellerPortrait } from "@/shared/content/characters";
+import type { TellerId } from "@/shared/content/types";
+import type { TellerLook, TellersSettings } from "@/shared/data/settingsSchema";
 import { CHAPTER_DEFAULTS, CHARACTER_DEFAULTS } from "@/shared/data/defaults";
 import type { NarrationMap, SeriesChapterRow, SeriesCharacterRow } from "@/shared/data/types";
 import {
@@ -14,6 +19,7 @@ import { CollectionPanel } from "./CollectionPanel";
 import { EditorShell } from "./EditorShell";
 import { PanelFrame, TextField } from "./forms";
 import type { Notify } from "./parts";
+import { VoiceLookEditor, type LookState } from "./VoiceLook";
 
 type WithId<T extends { slug: string }> = T & { id: string };
 const NARRATION_KEYS = ["hello", "world", "day", "did", "others"] as const;
@@ -28,6 +34,7 @@ function merge<T extends { slug: string; order: number }>(defaults: T[], stored:
 export function SeriesPanel({
   chapters,
   characters,
+  tellers,
   locale,
   notify,
   hidden,
@@ -36,6 +43,8 @@ export function SeriesPanel({
 }: {
   chapters: SeriesChapterRow[];
   characters: SeriesCharacterRow[];
+  /** Per-voice look overrides (site_settings "tellers"). */
+  tellers: TellersSettings;
   locale: "en" | "fa";
   notify: Notify;
   hidden: boolean;
@@ -48,7 +57,7 @@ export function SeriesPanel({
   const onCharactersDirty = useCallback((d: boolean) => setDirtyParts((o) => (o.characters === d ? o : { ...o, characters: d })), []);
   const anyDirty = dirtyParts.chapters || dirtyParts.characters;
   useEffect(() => onDirty?.(anyDirty), [anyDirty, onDirty]);
-  const [part, setPart] = useState<"chapters" | "characters">("chapters");
+  const [part, setPart] = useState<"chapters" | "characters">("characters");
   const ch = useMemo(() => merge(CHAPTER_DEFAULTS, chapters), [chapters]);
   const cs = useMemo(() => merge(CHARACTER_DEFAULTS, characters), [characters]);
   const unstored = (part === "chapters" ? ch : cs).storedSlugs.size < (part === "chapters" ? ch : cs).rows.length;
@@ -56,7 +65,7 @@ export function SeriesPanel({
   return (
     <PanelFrame id="series" labelledBy={labelledBy} hidden={hidden} title={t("series.title")} sub={t("series.sub")}>
       <div className="adm-seg" role="group" aria-label={t("series.partLabel")}>
-        {(["chapters", "characters"] as const).map((p) => (
+        {(["characters", "chapters"] as const).map((p) => (
           <button key={p} type="button" className="adm-seg-btn" aria-pressed={part === p} onClick={() => setPart(p)}>
             {t(`series.parts.${p}`)}
           </button>
@@ -94,6 +103,8 @@ export function SeriesPanel({
         renderEditor={({ row, close, saved }) => (row ? <ChapterForm row={row} onClose={close} onSaved={saved} /> : null)}
       />
 
+      {part === "characters" && <VoicesSummary rows={cs.rows} locale={locale} />}
+
       <CollectionPanel
         table="series_characters"
         rows={cs.rows}
@@ -121,10 +132,45 @@ export function SeriesPanel({
         })}
         onToggle={setSeriesCharacterVisible}
         onDirty={onCharactersDirty}
-        renderEditor={({ row, close, saved }) => (row ? <CharacterForm row={row} onClose={close} onSaved={saved} /> : null)}
+        renderEditor={({ row, close, saved }) => (row ? <CharacterForm row={row} look={tellers[row.slug]} onClose={close} onSaved={saved} /> : null)}
       />
     </PanelFrame>
   );
+}
+
+/** Live count of voices on the site (from the stored rows) with the consequences of 0 and 1. */
+function VoicesSummary({ rows, locale }: { rows: WithId<SeriesCharacterRow>[]; locale: "en" | "fa" }) {
+  const t = useTranslations("admin");
+  const shown = rows.filter((r) => r.visible).length;
+  return (
+    <div className="adm-note" role="status" aria-live="polite">
+      <strong>{t("series.voices.count", { count: shown })}</strong> · {t("series.voices.of", { total: rows.length })}
+      {shown === 0 && <p style={{ margin: "0.4rem 0 0", color: "var(--danger, #e5484d)" }}>{t("series.voices.zero")}</p>}
+      {shown === 1 && <p style={{ margin: "0.4rem 0 0" }}>{t("series.voices.one")}</p>}
+      <p style={{ margin: "0.4rem 0 0" }}>
+        {t("series.voices.order")}{" "}
+        <a className="lbf-textbtn" href={getPathname({ href: "/projects/series", locale })} target="_blank" rel="noreferrer">
+          {t("series.voices.preview")}
+          <span className="sr-only"> ({t("series.voices.previewFor")})</span>
+        </a>
+      </p>
+    </div>
+  );
+}
+
+const lookToState = (l: TellerLook | undefined): LookState => ({
+  portrait: l?.portrait ?? "",
+  focus: l?.focus ?? null,
+  accent: l?.accent ?? null,
+  stageHue: l?.stageHue ?? null,
+});
+function stateToLook(s: LookState): TellerLook | null {
+  const out: TellerLook = {};
+  if (s.portrait) out.portrait = s.portrait;
+  if (s.focus) out.focus = s.focus;
+  if (s.accent) out.accent = [s.accent[0], s.accent[1], s.accent[2]];
+  if (s.stageHue != null) out.stageHue = s.stageHue;
+  return Object.keys(out).length ? out : null;
 }
 
 function ChapterForm({ row, onClose, onSaved }: { row: SeriesChapterRow; onClose: () => void; onSaved: (m: string) => void }) {
@@ -190,7 +236,17 @@ function ChapterForm({ row, onClose, onSaved }: { row: SeriesChapterRow; onClose
   );
 }
 
-function CharacterForm({ row, onClose, onSaved }: { row: SeriesCharacterRow; onClose: () => void; onSaved: (m: string) => void }) {
+function CharacterForm({
+  row,
+  look,
+  onClose,
+  onSaved,
+}: {
+  row: SeriesCharacterRow;
+  look: TellerLook | undefined;
+  onClose: () => void;
+  onSaved: (m: string) => void;
+}) {
   const t = useTranslations("admin");
   const builtIn = useMemo(() => CHARACTER_DEFAULTS.find((c) => c.slug === row.slug), [row.slug]);
   const initial = useMemo(
@@ -203,8 +259,9 @@ function CharacterForm({ row, onClose, onSaved }: { row: SeriesCharacterRow; onC
       moodFa: row.mood_fa,
       narrationEn: { ...(row.narration_en ?? {}) } as NarrationMap,
       narrationFa: { ...(row.narration_fa ?? {}) } as NarrationMap,
+      look: lookToState(look),
     }),
-    [row],
+    [row, look],
   );
   const [f, setF] = useState(initial);
   const [errors, setErrors] = useState<{ nameEn?: string; nameFa?: string }>({});
@@ -251,6 +308,7 @@ function CharacterForm({ row, onClose, onSaved }: { row: SeriesCharacterRow; onC
         moodFa: f.moodFa.trim() || null,
         narrationEn: clean(f.narrationEn),
         narrationFa: clean(f.narrationFa),
+        look: stateToLook(f.look),
       });
       if (res.success) onSaved(t("series.characterSaved"));
       else setError(t("saveFailed", { error: res.error }));
@@ -280,6 +338,18 @@ function CharacterForm({ row, onClose, onSaved }: { row: SeriesCharacterRow; onC
         <TextField label={t("series.roleFa")} dir="rtl" value={f.roleFa} onChange={set("roleFa")} />
         <TextField label={t("series.moodEn")} dir="ltr" value={f.moodEn} onChange={set("moodEn")} />
         <TextField label={t("series.moodFa")} dir="rtl" value={f.moodFa} onChange={set("moodFa")} />
+      </div>
+
+      <div className="adm-group">
+        <VoiceLookEditor
+          value={f.look}
+          onChange={(look) => setF((p) => ({ ...p, look }))}
+          defaults={{
+            accent: TELLER_BY_ID[row.slug as TellerId].accent,
+            stageHue: TELLER_BY_ID[row.slug as TellerId].stageHue.default,
+          }}
+          portraitDefault={tellerPortrait(row.slug as TellerId)}
+        />
       </div>
 
       <div className="adm-group">

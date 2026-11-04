@@ -145,6 +145,11 @@ export interface SeriesCharacterInput {
   /** hello / world / day / did / others; empty or missing = built-in line. */
   narrationEn?: Record<string, string> | null;
   narrationFa?: Record<string, string> | null;
+  /**
+   * The voice's look (portrait, focus point, accent, stage hue) stored in site_settings "tellers".
+   * undefined = leave as is, null (or {}) = back to the code defaults.
+   */
+  look?: import("@/shared/data/settingsSchema").TellerLook | null;
 }
 
 export interface MediaItem {

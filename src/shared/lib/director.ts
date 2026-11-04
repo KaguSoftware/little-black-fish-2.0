@@ -1,7 +1,8 @@
 import { Vector3 } from "three";
 import type { ChapterId, StillId, Teller, TellerId } from "../content/types";
 import { CHAPTER_BY_ID, TYPE_WINDOW, resolveProgress } from "../content/chapters";
-import { TELLERS, TELLER_BY_ID, TELLER_IDS } from "../content/characters";
+import { TELLER_BY_ID, TELLER_IDS } from "../content/characters";
+import { tellerView } from "../content/roster";
 import { MOODS, blendMoods } from "../content/moods";
 import { mixLab, oklabCss, oklabToLinear, oklchToOklab, stageOklch, type Lab } from "./color";
 import {
@@ -131,7 +132,8 @@ export function computeFrame(input: DirectorInput): FrameParams {
     if (w > wmax) wmax = w;
   }
   f.settled = wmax / (wsum || 1);
-  const active = TELLERS.filter((t) => f.weights[t.id] > 0);
+  // Tellers still blending in or out; their accent / stage hue come from the admin roster.
+  const active = TELLER_IDS.filter((id) => f.weights[id] > 0).map(tellerView);
 
   // ── Story position ───────────────────────────────────────────────────────
   const r = resolveProgress(f.progress);
@@ -223,7 +225,7 @@ export function computeFrame(input: DirectorInput): FrameParams {
     lab: oklchToOklab(t.accent),
     w: f.weights[t.id] * (1 - hoverW),
   }));
-  if (hoverW > 0) accEntries.push({ lab: oklchToOklab(TELLER_BY_ID[input.hover!].accent), w: hoverW });
+  if (hoverW > 0) accEntries.push({ lab: oklchToOklab(tellerView(input.hover!).accent), w: hoverW });
   f.accentLab = mixLab(accEntries);
   f.accent = oklabToLinear(f.accentLab);
   f.accentCss = oklabCss(f.accentLab);

@@ -368,6 +368,7 @@ export function AdminPanel({ data, locale }: { data: AdminData; locale: "en" | "
         <SeriesPanel
           chapters={data.seriesChapters}
           characters={data.seriesCharacters}
+          tellers={data.settings.tellers}
           locale={locale}
           notify={notify}
           hidden={tab !== "series"}

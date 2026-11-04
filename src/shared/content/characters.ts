@@ -168,16 +168,18 @@ export const FIRST_TELLER: TellerId = "child";
 
 /**
  * Where the other characters stand in this teller's version of a chapter.
- * Overrides in `teller.cast[chapter]` win. Positions in stage metres, hero at x = side * 1.15, z = 0.
+ * `ids` = the visible roster (admin), in order; hidden voices never stand on stage. Overrides in
+ * `teller.cast[chapter]` win (filtered to `ids`). Positions in stage metres, hero at x = side * 1.15, z = 0.
  * Side characters are upstage (negative z), on the side opposite the hero so they stay visible.
  */
-export function castFor(teller: Teller, chapter: ChapterId): CastSpot[] {
+export function castFor(teller: Teller, chapter: ChapterId, ids: readonly TellerId[] = TELLER_IDS): CastSpot[] {
   const override = teller.cast?.[chapter];
-  if (override) return override;
+  if (override) return override.filter((s) => ids.includes(s.id));
   if (chapter === "look" || chapter === "maker") return [];
-  const others = TELLER_IDS.filter((id) => id !== teller.id);
+  const others = ids.filter((id) => id !== teller.id);
+  if (others.length === 0) return [];
   const side = CHAPTER_BY_ID[chapter].side || 1;
-  const seed = TELLER_IDS.indexOf(teller.id);
+  const seed = Math.max(0, ids.indexOf(teller.id));
   switch (chapter) {
     case "hello":
       // Far back, scattered, barely there: we've just met.

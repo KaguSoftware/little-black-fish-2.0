@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { buildRoster, rosterEntry, setActiveRoster, type RosterEntry, type RosterTeller } from "@/shared/content/roster";
+import { TELLER_IDS } from "@/shared/content/characters";
 import { SETTING_DEFAULTS, type HeroVideo, type SeriesSettings, type SocialLink, type StudioSettings } from "./settingsSchema";
 
 /** Admin-editable site data handed to client components by the locale layout (server). */
@@ -9,8 +11,9 @@ export interface SiteData {
   socials: SocialLink[];
   series: SeriesSettings;
   heroVideos: HeroVideo[];
-  /** Series characters / chapters switched off in /admin (ids). */
-  hiddenTellers: string[];
+  /** Visible voices, in admin order, with their look (see content/roster.ts). May be empty. */
+  roster: RosterEntry[];
+  /** Series chapters switched off in /admin (ids). */
   hiddenChapters: string[];
 }
 
@@ -19,14 +22,23 @@ export const SITE_DATA_DEFAULT: SiteData = {
   socials: SETTING_DEFAULTS.socials,
   series: SETTING_DEFAULTS.series,
   heroVideos: SETTING_DEFAULTS.heroVideos,
-  hiddenTellers: [],
+  roster: TELLER_IDS.map((id) => rosterEntry(id)),
   hiddenChapters: [],
 };
 
 const Ctx = createContext<SiteData>(SITE_DATA_DEFAULT);
 
 export function SiteDataProvider({ value, children }: { value: SiteData; children: ReactNode }) {
+  // Non-React code (director, runtime, lantern) reads the registry. Client only: the server
+  // handles concurrent requests, a module-level roster there would leak between them.
+  if (typeof window !== "undefined") setActiveRoster(value.roster);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export const useSiteData = () => useContext(Ctx);
+
+/** The visible voices (ordered, overrides applied). Empty when all are hidden. */
+export function useRoster(): RosterTeller[] {
+  const { roster } = useSiteData();
+  return useMemo(() => buildRoster(roster), [roster]);
+}

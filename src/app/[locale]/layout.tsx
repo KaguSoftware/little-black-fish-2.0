@@ -14,9 +14,12 @@ import { SiteDataProvider } from "@/shared/data/SiteData";
 import { getSettings } from "@/shared/data/settings";
 import { getSeriesContent } from "@/shared/data/series";
 import { CHAPTERS } from "@/shared/content/chapters";
-import { TELLERS } from "@/shared/content/characters";
+import { rosterFrom } from "@/shared/content/roster";
 
 const ENV_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+
+/** Only real locales render; any other first segment (e.g. /foo.txt) 404s without running the layout. */
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -61,16 +64,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   setRequestLocale(locale);
   const t = await getTranslations("common");
   const [settings, series] = await Promise.all([getSettings(), getSeriesContent()]);
-  const shownTellers = new Set(series.characters.map((c) => c.slug));
   const shownChapters = new Set(series.chapters.map((c) => c.slug));
-  const hiddenTellers = shownTellers.size ? TELLERS.map((x) => x.id as string).filter((id) => !shownTellers.has(id)) : [];
   const hiddenChapters = shownChapters.size ? CHAPTERS.map((x) => x.id as string).filter((id) => !shownChapters.has(id)) : [];
   const siteData = {
     studio: settings.studio,
     socials: settings.socials,
     series: settings.series,
     heroVideos: settings.heroVideos,
-    hiddenTellers,
+    roster: rosterFrom(series.characters, settings.tellers),
     hiddenChapters,
   };
 

@@ -15,7 +15,7 @@ import {
   Vector3,
 } from "three";
 import { MOODS } from "@/shared/content/moods";
-import { TELLERS, TELLER_BY_ID } from "@/shared/content/characters";
+import type { Oklch } from "@/shared/content/types";
 import { AdaptiveDpr } from "@/shared/lib/AdaptiveDpr";
 import { oklchToLinear } from "@/shared/lib/color";
 import { clamp, damp, noise1, smoothstep, TAU } from "@/shared/lib/math";
@@ -30,7 +30,6 @@ export interface PupilPoint {
   valid: boolean;
 }
 
-const ACCENT = oklchToLinear(TELLER_BY_ID["snake-king"].accent);
 const RING_TILT = 1.02;
 const RING_ROLL = -0.34;
 /** How much of the section's height the standing figure fills (feet to crown). */
@@ -73,6 +72,10 @@ interface RigProps {
   /** Viewport px of the left pupil, every frame. */
   onPupil: (x: number, y: number) => void;
   onUsable: (ok: boolean) => void;
+  /** Rim light / puppet accent (the eyes teller's accent). */
+  accent: Oklch;
+  /** One orbiting dot per visible voice, in roster order. Never empty. */
+  ring: readonly Oklch[];
 }
 
 interface RigState {
@@ -94,7 +97,7 @@ interface RigLive {
   onUsable: (ok: boolean) => void;
 }
 
-function makeInputs(): RigInputs {
+function makeInputs(accent: readonly [number, number, number]): RigInputs {
   return {
     x: 0, z: 0, rotY: 0, walk: 0, stride: 0,
     lookAt: new Vector3(0, 1.4, 3),
@@ -104,18 +107,19 @@ function makeInputs(): RigInputs {
     hero: true,
     frozen: false,
     quality: "high",
-    accent: ACCENT,
+    accent: [accent[0], accent[1], accent[2]],
   };
 }
 
-function makeRigObjects(): RigObjects {
+function makeRigObjects(accent: readonly [number, number, number], ring: readonly Oklch[]): RigObjects {
+  const ACCENT = accent;
   const spot = new SpotLight(new Color(1.0, 0.92, 0.8), 0, 0, 0.3, 1, 2);
   const rim = new PointLight(new Color(ACCENT[0], ACCENT[1], ACCENT[2]), 0, 0, 2);
   const g = new BufferGeometry();
-  g.setAttribute("position", new BufferAttribute(new Float32Array(TELLERS.length * 3), 3));
-  const col = new Float32Array(TELLERS.length * 3);
-  TELLERS.forEach((t, i) => {
-    const c = oklchToLinear([Math.min(0.86, t.accent[0] + 0.12), t.accent[1], t.accent[2]]);
+  g.setAttribute("position", new BufferAttribute(new Float32Array(ring.length * 3), 3));
+  const col = new Float32Array(ring.length * 3);
+  ring.forEach((a, i) => {
+    const c = oklchToLinear([Math.min(0.86, a[0] + 0.12), a[1], a[2]]);
     col[i * 3] = c[0];
     col[i * 3 + 1] = c[1];
     col[i * 3 + 2] = c[2];
@@ -261,7 +265,7 @@ function stepRig(
   const R = eyeDist * 1.08;
   const speed = ui.reducedMotion || ui.paused ? 0 : 0.2 + S.surprise * 0.18;
   const posAttr = dots.geometry.getAttribute("position") as BufferAttribute;
-  const n = TELLERS.length;
+  const n = Math.max(1, posAttr.count);
   S.ang += dt * speed;
   const ang0 = S.ang;
   const cT = Math.cos(RING_TILT);
@@ -282,15 +286,17 @@ function stepRig(
   mat.uniforms.uGain.value = rv;
 }
 
-function Rig({ puppet, revealed, engaged, onPupil, onUsable }: RigProps) {
-  const inputs = useRef<RigInputs>(makeInputs());
+function Rig({ puppet, revealed, engaged, onPupil, onUsable, accent, ring }: RigProps) {
+  const accentLin = useMemo(() => oklchToLinear(accent), [accent]);
+  const inputs = useRef<RigInputs>(makeInputs(accentLin));
+  inputs.current.accent = accentLin;
   const st = useRef<RigState>({
     usable: null,
     cx: 0, cy: 0, cz: 0, camD: 1,
     gx: 0, gy: 0, surprise: 0, reveal: 0, delay: 0, started: false, ang: 0.6,
   });
   const live = useRef<RigLive>({ revealed, engaged, onPupil, onUsable });
-  const objs = useMemo(() => makeRigObjects(), []);
+  const objs = useMemo(() => makeRigObjects(accentLin, ring), [accentLin, ring]);
   usePuppetRig(puppet, () => inputs.current);
 
   useEffect(() => {

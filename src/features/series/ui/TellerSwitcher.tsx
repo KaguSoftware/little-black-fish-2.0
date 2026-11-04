@@ -3,8 +3,7 @@
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
-import { TELLERS, tellerPortrait } from "@/shared/content/characters";
-import { useSiteData } from "@/shared/data/SiteData";
+import { useRoster } from "@/shared/data/SiteData";
 import { useSeries, useUI } from "@/shared/state/store";
 import { SPRING, tellerAccentCss } from "./lib/enter";
 import { tellerName } from "./lib/i18n";
@@ -16,8 +15,7 @@ import { tellerName } from "./lib/i18n";
  */
 export function TellerSwitcher() {
   const tr = useTranslations("series");
-  const { hiddenTellers } = useSiteData();
-  const cast = TELLERS.filter((t) => !hiddenTellers.includes(t.id));
+  const cast = useRoster();
   const rtl = useLocale() === "fa";
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
@@ -60,6 +58,9 @@ export function TellerSwitcher() {
     btns.current[j]?.focus();
   };
 
+  // Nobody to switch to with a single voice.
+  if (cast.length < 2) return null;
+
   return (
     <nav
       aria-label={tr("switcherLabel")}
@@ -97,7 +98,7 @@ export function TellerSwitcher() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={tellerPortrait(t.id)}
+                    src={t.portraitUrl}
                     alt=""
                     width={48}
                     height={64}
@@ -108,6 +109,7 @@ export function TellerSwitcher() {
                     className={`size-full rounded-full object-cover ${
                       pressed ? "" : "opacity-70 saturate-[0.7] group-hover:opacity-100 group-hover:saturate-100"
                     }`}
+                    style={{ objectPosition: `${t.portraitFocus[0]}% ${t.portraitFocus[1]}%` }}
                   />
                   <span
                     aria-hidden="true"

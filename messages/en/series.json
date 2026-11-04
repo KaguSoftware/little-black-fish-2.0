@@ -2,7 +2,13 @@
   "metaTitle": "Shahnameh",
   "metaDescription": "One story, six points of view. Switch teller at any moment and hear the same story from another side.",
   "seriesTitle": "Shahnameh",
-  "srHeading": "The series, told by six characters",
+  "srHeading": "The series, told by {count} characters",
+  "srHeadingOne": "The series, told by one character",
+  "empty": {
+    "title": "The voices are resting",
+    "text": "No characters are on the series page right now. Check back soon.",
+    "back": "Back to the studio"
+  },
   "scrollHint": "Scroll, or just watch.",
   "watch": "Watch the series",
   "chapterLabel": "{number} · {title}",

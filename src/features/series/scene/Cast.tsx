@@ -3,7 +3,8 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Group } from "three";
-import { TELLER_BY_ID, TELLER_IDS, castFor } from "@/shared/content/characters";
+import { castFor } from "@/shared/content/characters";
+import { activeIds, tellerView } from "@/shared/content/roster";
 import { MOODS } from "@/shared/content/moods";
 import type { CastSpot, TellerId } from "@/shared/content/types";
 import { oklchToLinear } from "@/shared/lib/color";
@@ -31,6 +32,8 @@ const DIM = 0.62;
 export function Cast() {
   const teller = useSeries((s) => s.teller);
   const chapter = useSeries((s) => s.chapter);
+  // The visible roster (admin). SeriesPage remounts the stage when it changes.
+  const roster = useMemo(() => activeIds(), []);
   const requested = useSeries((s) => s.requested);
   const quality = useUI((s) => s.quality);
   const gl = useThree((s) => s.gl);
@@ -43,7 +46,7 @@ export function Cast() {
   const sceneReady = useSeries((s) => s.sceneReady);
   const [warm, setWarm] = useState(0);
   useEffect(() => {
-    if (!sceneReady || warm >= TELLER_IDS.length) return;
+    if (!sceneReady || warm >= roster.length) return;
     const next = () => setWarm((n) => n + 1);
     const w = window as Window & {
       requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
@@ -55,15 +58,15 @@ export function Cast() {
     }
     const t = window.setTimeout(next, warm === 0 ? 1500 : 700);
     return () => window.clearTimeout(t);
-  }, [sceneReady, warm]);
+  }, [sceneReady, warm, roster]);
 
   const ids = useMemo(() => {
-    const others = TELLER_IDS.filter((id) => id !== teller).filter((id, i) => i < warm || requested[id]);
+    const others = roster.filter((id) => id !== teller).filter((id, i) => i < warm || requested[id]);
     return quality === "low" ? others.slice(0, 3) : others;
-  }, [teller, requested, quality, warm]);
+  }, [teller, requested, quality, warm, roster]);
 
   const hiddenChapter = chapter === "look" || chapter === "maker";
-  const spots = useMemo(() => castFor(TELLER_BY_ID[teller], chapter), [teller, chapter]);
+  const spots = useMemo(() => castFor(tellerView(teller), chapter, roster), [teller, chapter, roster]);
 
   return (
     <group name="cast">
@@ -95,8 +98,8 @@ function CastMember({ id, spot }: { id: TellerId; spot: CastSpot | null }) {
   if (spot) lastSpot.current = spot;
 
   const m = useRef<Motion>({ x: 0, z: -6, rotY: 0, scale: 1, vis: 0, stride: 0, walk: 0, placed: false }).current;
-  const mood = MOODS[TELLER_BY_ID[id].mood];
-  const accent = useMemo(() => oklchToLinear(TELLER_BY_ID[id].accent), [id]);
+  const mood = MOODS[tellerView(id).mood];
+  const accent = useMemo(() => oklchToLinear(tellerView(id).accent), [id]);
   const inputs = useMemo<RigInputs>(() => {
     const i = makeRigInputs();
     i.hero = false;

@@ -3,9 +3,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
-import { TELLERS, TELLER_IDS, tellerPortrait } from "@/shared/content/characters";
 import type { TellerId } from "@/shared/content/types";
-import { useSiteData } from "@/shared/data/SiteData";
+import { useRoster } from "@/shared/data/SiteData";
 import { useSeries, useUI } from "@/shared/state/store";
 import { listVariants, tellerAccentCss } from "./lib/enter";
 import { scrollToTop } from "./lib/lenis";
@@ -20,18 +19,18 @@ import { tellerName } from "./lib/i18n";
  */
 export function CastList() {
   const tr = useTranslations("series");
-  const { hiddenTellers } = useSiteData();
-  const cast = TELLERS.filter((t) => !hiddenTellers.includes(t.id));
+  const cast = useRoster();
   const chapter = useSeries((s) => s.chapter);
   const teller = useSeries((s) => s.teller);
   const rm = useUI((s) => s.reducedMotion);
-  const visible = chapter === "others";
+  // One voice has no others to hand over to: the list would only point at itself.
+  const visible = chapter === "others" && cast.length > 1;
 
   useEffect(() => {
     if (!visible) return;
-    useSeries.getState().request(TELLER_IDS);
+    useSeries.getState().request(cast.map((t) => t.id));
     return () => useSeries.getState().setHoverTeller(null);
-  }, [visible]);
+  }, [visible, cast]);
 
   const v = listVariants(rm, 0.07, 0.25);
 
@@ -86,7 +85,7 @@ export function CastList() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={tellerPortrait(t.id)}
+                      src={t.portraitUrl}
                       alt=""
                       width={300}
                       height={400}
@@ -98,7 +97,7 @@ export function CastList() {
                       className={`size-full object-cover ${
                         now ? "" : "opacity-80 saturate-[0.75] group-hover:opacity-100 group-hover:saturate-100 group-focus-visible:opacity-100"
                       }`}
-                      style={{ borderRadius: "0.4rem" }}
+                      style={{ borderRadius: "0.4rem", objectPosition: `${t.portraitFocus[0]}% ${t.portraitFocus[1]}%` }}
                     />
                     <span
                       aria-hidden="true"

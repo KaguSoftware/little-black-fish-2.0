@@ -3,8 +3,8 @@
 import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { getPathname, useRouter } from "@/i18n/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { TELLER_BY_ID } from "@/shared/content/characters";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRoster } from "@/shared/data/SiteData";
 import { oklchCss } from "@/shared/lib/color";
 import { useTellerPuppet } from "@/shared/puppets/rig/useTellerPuppet";
 import { useIris, useUI } from "@/shared/state/store";
@@ -16,7 +16,6 @@ import s from "./home.module.css";
 const EyesScene = dynamic(() => import("./EyesScene"), { ssr: false });
 
 const SERIES_HREF = "/projects/series";
-const RIM = oklchCss(TELLER_BY_ID["snake-king"].accent);
 
 /**
  * The CTA. The screen goes to black; the Snake King's mask fades up out of the dark, lit
@@ -29,6 +28,11 @@ export function EyesCTA() {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("home.eyes");
+  // The eyes belong to the Snake King; when he is switched off the first visible voice lends his.
+  const roster = useRoster();
+  const lead = roster.find((x) => x.id === "snake-king") ?? roster[0] ?? null;
+  const RIM = oklchCss(lead?.accent ?? [0.7, 0.14, 140]);
+  const ring = useMemo(() => roster.map((x) => x.accent), [roster]);
   const quality = useUI((st) => st.quality);
   const [near, setNear] = useState(false);
   const [inView, setInView] = useState(false);
@@ -39,7 +43,7 @@ export function EyesCTA() {
   const pupil = useRef<PupilPoint>({ x: 0, y: 0, valid: false });
 
   // Build the puppet only once the section is within a screen of the viewport.
-  const puppet = useTellerPuppet(near ? "snake-king" : null);
+  const puppet = useTellerPuppet(near && lead ? lead.id : null);
 
   useEffect(() => {
     const el = ref.current;
@@ -82,7 +86,7 @@ export function EyesCTA() {
         ? { x: e.clientX, y: e.clientY }
         : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     navigateWithIris(SERIES_HREF, origin, { rim: RIM, waitForReady: true });
-  }, []);
+  }, [RIM]);
 
   const sceneLive = !!puppet && usable;
 
@@ -97,10 +101,12 @@ export function EyesCTA() {
       aria-labelledby="eyes-title"
     >
       <div className={s.eyesStage} aria-hidden>
-        {near && puppet && (
+        {near && puppet && lead && (
           <div className={s.eyesCanvas} data-live={sceneLive ? "true" : "false"}>
             <EyesScene
               puppet={puppet}
+              accent={lead.accent}
+              ring={ring}
               active={inView}
               revealed={revealed}
               highTier={quality === "high"}

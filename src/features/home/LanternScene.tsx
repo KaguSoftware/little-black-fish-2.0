@@ -24,7 +24,7 @@ import {
 } from "three";
 import { STILL_BY_ID, stillCard, stillHero, stillPlate } from "@/shared/content/stills";
 import type { StillId } from "@/shared/content/types";
-import { TELLER_BY_ID } from "@/shared/content/characters";
+import type { RosterTeller } from "@/shared/content/roster";
 import { useUI } from "@/shared/state/store";
 import { AdaptiveDpr } from "@/shared/lib/AdaptiveDpr";
 import { oklchToLinear } from "@/shared/lib/color";
@@ -90,12 +90,23 @@ const PAN = 0.035;
  */
 const VIDEO_SLOT_INDEX = [7, 9] as const;
 /** The hero films (settings.heroVideos, in order) mapped onto their wall slots. */
-function videoSlots(videos: readonly string[]): Record<number, string> {
+function videoSlots(videos: readonly string[], order: readonly StillId[]): Record<number, string> {
   const out: Record<number, string> = {};
   VIDEO_SLOT_INDEX.forEach((slot, k) => {
-    if (videos[k]) out[slot] = videos[k];
+    if (!videos[k] || order.length === 0) return;
+    // Keep the film on its own still; if that voice is switched off, on the nearest plate still free.
+    let at = order.indexOf(WALL_ORDER[slot]);
+    if (at < 0) at = Math.min(slot, order.length - 1);
+    while (out[at] && at > 0) at--;
+    if (!out[at]) out[at] = videos[k];
   });
   return out;
+}
+
+/** The wall without the stills of voices switched off in /admin (a still stays if any of its voices is on). */
+function wallOrder(roster: readonly RosterTeller[]): StillId[] {
+  const on = new Set<string>(roster.map((t) => t.id));
+  return WALL_ORDER.filter((id) => STILL_BY_ID[id].tellers.some((t) => on.has(t)));
 }
 
 /** A plate's footprint in hero CSS px, written each frame so the wall can tell which one the light is on. */
@@ -302,8 +313,8 @@ const WRAP = 1.9;
 /** How much a focused plate grows as it comes forward. */
 const LIFT = 0.06;
 
-function buildSpecs(count: number, highTier: boolean, videos: Record<number, string>): PlateSpec[] {
-  const ids = WALL_ORDER.slice(0, count);
+function buildSpecs(count: number, highTier: boolean, videos: Record<number, string>, order: readonly StillId[], roster: readonly RosterTeller[]): PlateSpec[] {
+  const ids = order.slice(0, count);
   const lanes = DEPTHS.length;
   return ids.map((id, i) => {
     const lane = i % lanes;
@@ -321,7 +332,7 @@ function buildSpecs(count: number, highTier: boolean, videos: Record<number, str
       hFrac: 0.62 + (hash1(i * 5.3) * 0.5 + 0.5) * 0.4,
       speed: -0.03 * (DEPTHS[0] / depth) * (0.85 + (hash1(i * 2.2) * 0.5 + 0.5) * 0.3),
       seed: i * 1.618,
-      teller: oklchToLinear(TELLER_BY_ID[still.tellers[0]].accent),
+      teller: oklchToLinear((roster.find((t) => still.tellers.includes(t.id)) ?? roster[0]).accent),
       large: highTier && lane < 2,
       video: highTier ? videos[i] : undefined,
     };
@@ -793,13 +804,17 @@ function pickFocus(f: Focus) {
   f.target = best;
 }
 
-function Wall({ highTier, motionOn, active, videos }: { highTier: boolean; motionOn: { current: boolean }; active: boolean; videos: readonly string[] }) {
+function Wall({ highTier, motionOn, active, videos, roster }: { highTier: boolean; motionOn: { current: boolean }; active: boolean; videos: readonly string[]; roster: readonly RosterTeller[] }) {
   const count = highTier ? 12 : 7;
   // Films start fetching only once every still has been requested (the stagger above).
   const videoDelay = 120 + count * (highTier ? 260 : 340) + 600;
   const videoKey = videos.join("|");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const specs = useMemo(() => buildSpecs(count, highTier, videoSlots(videos)), [count, highTier, videoKey]);
+  const order = useMemo(() => wallOrder(roster), [roster]);
+  const specs = useMemo(
+    () => (roster.length ? buildSpecs(count, highTier, videoSlots(videos, order), order, roster) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [count, highTier, videoKey, order, roster],
+  );
   const shared = useMemo<Shared>(
     () => ({
       uLant: { value: new Vector2(0, 0) },
@@ -850,9 +865,11 @@ export interface LanternSceneProps {
   videos: readonly string[];
   /** Ambient camera sway allowed (false under reduced motion). */
   motionOn: { current: boolean };
+  /** Visible voices (admin): decides which stills hang on the wall and their tints. */
+  roster: readonly RosterTeller[];
 }
 
-export default function LanternScene({ active, highTier, motionOn, videos }: LanternSceneProps) {
+export default function LanternScene({ active, highTier, motionOn, videos, roster }: LanternSceneProps) {
   return (
     <Canvas
       flat
@@ -866,7 +883,7 @@ export default function LanternScene({ active, highTier, motionOn, videos }: Lan
     >
       {/* The halftone grid is laid out in drawing-buffer px, so a lower ratio only softens the dots. */}
       <AdaptiveDpr min={1} max={highTier ? 2 : 1.5} />
-      <Wall highTier={highTier} motionOn={motionOn} active={active} videos={videos} />
+      <Wall highTier={highTier} motionOn={motionOn} active={active} videos={videos} roster={roster} />
     </Canvas>
   );
 }

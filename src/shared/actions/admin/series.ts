@@ -3,6 +3,7 @@
 import { createServiceClient } from "@/shared/supabase/server";
 import { TAGS } from "@/shared/data/cached";
 import { CHAPTER_DEFAULTS, CHARACTER_DEFAULTS } from "@/shared/data/defaults";
+import { validateSetting, type TellerLook } from "@/shared/data/settingsSchema";
 import type { ActionResult, NarrationMap } from "@/shared/data/types";
 import { adminUser, audit, fail, refresh, text, UNAUTHORIZED } from "./lib";
 import type { SeriesChapterInput, SeriesCharacterInput } from "./types";
@@ -54,6 +55,24 @@ export async function updateSeriesChapter(slug: string, input: SeriesChapterInpu
   }
 }
 
+/**
+ * Read-modify-write of one voice inside the shared "tellers" settings row (so saving one voice never
+ * clobbers another). `look` null/{} removes the voice's overrides. Returns an error message or null.
+ */
+async function writeLook(slug: string, look: TellerLook | null): Promise<string | null> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.from("site_settings").select("value").eq("key", "tellers").maybeSingle();
+  if (error) return error.message || "Failed to read voice looks";
+  const cur: Record<string, unknown> =
+    data?.value && typeof data.value === "object" && !Array.isArray(data.value) ? { ...(data.value as object) } : {};
+  if (look && Object.keys(look).length) cur[slug] = look;
+  else delete cur[slug];
+  const v = validateSetting("tellers", cur);
+  if (!v.ok) return v.error;
+  const { error: writeError } = await supabase.from("site_settings").upsert({ key: "tellers", value: v.value }, { onConflict: "key" });
+  return writeError ? writeError.message || "Failed to save the voice look" : null;
+}
+
 export async function updateSeriesCharacter(slug: string, input: SeriesCharacterInput): Promise<ActionResult> {
   const user = await adminUser();
   if (!user) return UNAUTHORIZED;
@@ -76,6 +95,12 @@ export async function updateSeriesCharacter(slug: string, input: SeriesCharacter
       narration_fa: nFa,
     };
     if (!row.name_en || !row.name_fa) return { success: false, error: "Name is required in both languages" };
+    let look: TellerLook | null | undefined;
+    if (input?.look !== undefined) {
+      const v = validateSetting("tellers", input.look ? { [slug]: input.look } : {});
+      if (!v.ok) return { success: false, error: v.error };
+      look = v.value[slug] ?? null;
+    }
 
     const supabase = createServiceClient();
     const { data: existing } = await supabase
@@ -90,8 +115,13 @@ export async function updateSeriesCharacter(slug: string, input: SeriesCharacter
         { onConflict: "slug" },
       );
     if (error) return fail("series character", error, "Failed to save character");
+    if (look !== undefined) {
+      const lookError = await writeLook(slug, look);
+      if (lookError) return fail("series character look", lookError, "Failed to save the voice look");
+      await audit(user, "series.character.look", slug);
+    }
     await audit(user, "series.character.update", slug);
-    refresh(TAGS.series);
+    refresh(TAGS.series, TAGS.settings);
     return { success: true };
   } catch (error) {
     return fail("series character", error, "Failed to save character");
