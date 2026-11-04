@@ -136,16 +136,17 @@ box-shadow:0 -1px 0 var(--accent),0 -24px 32px -8px var(--stage);animation:adm-i
 .adm-media-acts{display:flex;flex-wrap:wrap;gap:0 1rem}
 
 /* Dashboard */
-.adm-stats{margin:0 0 clamp(1.75rem,4vh,2.75rem);padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(10.5rem,1fr));
-border-top:1px solid var(--hairline)}
-.adm-stat{display:grid;gap:.15rem;width:100%;min-height:2.75rem;padding:1rem 0;border:0;border-bottom:1px solid var(--hairline);background:none;
-text-align:start;cursor:pointer;color:var(--ink);transition:color .12s linear}
+.adm-stats{margin:0 0 clamp(1.75rem,4vh,2.75rem);padding:0;list-style:none;display:grid;gap:.75rem;grid-template-columns:repeat(auto-fill,minmax(11.5rem,1fr));align-items:stretch}
+.adm-stats>li{display:flex;min-width:0}
+.adm-stat{display:grid;grid-template-rows:auto auto 1fr;align-content:start;gap:.35rem;width:100%;min-height:7.5rem;padding:1.1rem 1.15rem;border:1px solid var(--hairline);border-radius:.5rem;background:oklch(0.93 0.012 80 / 0.03);
+text-align:start;cursor:pointer;color:var(--ink);transition:color .12s linear,border-color .12s linear,background-color .12s linear}
+.adm-stat:hover{border-color:oklch(0.93 0.012 80 / 0.32);background:oklch(0.93 0.012 80 / 0.06)}
 .adm-stat:hover .adm-stat-l{color:var(--ink)}
 .adm-stat:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.adm-stat-v{font-family:var(--font-display);font-size:var(--step-3);line-height:1;font-variant-numeric:tabular-nums}
+.adm-stat-v{font-family:var(--font-display);font-size:var(--step-3);line-height:1;font-variant-numeric:tabular-nums;margin-block-end:.25rem}
 .adm-stat[data-lit="true"] .adm-stat-v{color:var(--accent)}
 .adm-stat-l{font-size:var(--step--1);font-weight:500;color:var(--ink-dim)}
-.adm-stat-n{font-size:var(--step--1);color:var(--ink-mute)}
+.adm-stat-n{font-size:var(--step--1);color:var(--ink-mute);align-self:start}
 .adm-dash-cols{display:grid;gap:clamp(1.5rem,4vw,3rem)}
 @media (min-width:64rem){.adm-dash-cols{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}}
 .adm-audit{margin:.75rem 0 0;padding:0;list-style:none}
