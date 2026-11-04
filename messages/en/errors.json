@@ -1,0 +1,20 @@
+{
+  "missing": {
+    "metaTitle": "Frame missing",
+    "eyebrow": "Error 404",
+    "title": "This frame is missing.",
+    "body": "The film slipped out of the gate. Whatever was here was cut, moved, or never shot. The rest of the reel is fine.",
+    "home": "Back to the home page",
+    "projects": "Watch the projects"
+  },
+  "jammed": {
+    "metaTitle": "Projector jammed",
+    "eyebrow": "Something went wrong",
+    "title": "The projector caught.",
+    "body": "Something jammed on our side, not yours. Give the reel a breath, then try again.",
+    "announce": "Something went wrong. You can try again.",
+    "retry": "Try again",
+    "home": "Back to the home page",
+    "reference": "Reference {id}"
+  }
+}

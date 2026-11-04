@@ -3,7 +3,7 @@ import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
-import { requireAdminUser } from "@/shared/supabase/server";
+import { AdminAuthError, requireAdminUser } from "@/shared/supabase/server";
 import { loadAdminData } from "@/shared/actions/admin/data";
 import type { AdminData } from "@/shared/actions/admin/types";
 import { AdminPanel } from "@/features/admin/AdminPanel";
@@ -20,14 +20,26 @@ export default async function Page({ params }: PageProps<"/[locale]/admin">) {
   setRequestLocale(locale);
   await connection();
 
-  let data: AdminData;
+  // Only a real auth failure sends the visitor to /login. Anything else (a transient database or
+  // auth-server error) is rethrown into admin/error.tsx, where the admin can retry in place.
   try {
     await requireAdminUser();
+  } catch (err) {
+    unstable_rethrow(err);
+    if (!(err instanceof AdminAuthError)) throw err;
+    return redirect({ href: { pathname: "/login", query: { error: "forbidden" } }, locale });
+  }
+
+  let data: AdminData;
+  try {
     data = await loadAdminData();
   } catch (err) {
     unstable_rethrow(err);
+    if (err instanceof AdminAuthError) {
+      return redirect({ href: { pathname: "/login", query: { error: "forbidden" } }, locale });
+    }
     console.error("[admin] page:", err);
-    return redirect({ href: { pathname: "/login", query: { error: "forbidden" } }, locale });
+    throw err;
   }
 
   return <AdminPanel data={data} locale={locale === "fa" ? "fa" : "en"} />;

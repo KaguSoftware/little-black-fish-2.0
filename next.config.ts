@@ -7,6 +7,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 // routes mounted-but-hidden via <Activity>, which would leave WebGL canvases and
 // Lenis/rAF loops alive behind the visible page. Content pages use ISR (revalidate).
 const nextConfig: NextConfig = {
+  experimental: {
+    // A branded 404 for URLs that match no route at all (src/app/global-not-found.tsx).
+    globalNotFound: true,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [

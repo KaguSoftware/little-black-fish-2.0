@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createServerClient as createSSRClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -40,12 +40,25 @@ export function createServiceClient() {
   return createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 }
 
-/** Call at the top of every admin mutation and the admin page. */
+/** The caller is not (or no longer) a signed-in admin. Distinct from a transient outage. */
+export class AdminAuthError extends Error {
+  constructor() {
+    super("Unauthorized");
+    this.name = "AdminAuthError";
+  }
+}
+
+/**
+ * Call at the top of every admin mutation and the admin page. Throws AdminAuthError when the
+ * caller is not an admin. A transient auth-server failure (network, 5xx) is rethrown as is, so
+ * the admin page can show its error boundary instead of bouncing a real admin to /login.
+ */
 export async function requireAdminUser() {
   const {
     data: { user },
     error,
   } = await (await createServerClient()).auth.getUser();
-  if (error || !user || user.app_metadata?.role !== "admin") throw new Error("Unauthorized");
+  if (error && isAuthRetryableFetchError(error)) throw error;
+  if (error || !user || user.app_metadata?.role !== "admin") throw new AdminAuthError();
   return user;
 }

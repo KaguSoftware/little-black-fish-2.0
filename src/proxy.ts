@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import createIntlMiddleware from "next-intl/middleware";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 
@@ -33,6 +34,7 @@ export default async function proxy(request: NextRequest) {
   // Do not remove: refreshes an expired session.
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
   const withCookies = (res: NextResponse) => {
@@ -41,7 +43,10 @@ export default async function proxy(request: NextRequest) {
   };
 
   const match = request.nextUrl.pathname.match(ADMIN_RE);
-  if (match && (!user || user.app_metadata?.role !== "admin")) {
+  // A transient auth-server failure is not "signed out": let the page (the second lock) decide,
+  // so a real admin lands in the admin error boundary instead of being bounced to /login.
+  const authDown = authError !== null && isAuthRetryableFetchError(authError);
+  if (match && !authDown && (!user || user.app_metadata?.role !== "admin")) {
     const url = request.nextUrl.clone();
     url.pathname = `/${match[1]}/login`;
     url.search = "";

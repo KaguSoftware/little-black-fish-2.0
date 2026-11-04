@@ -1,0 +1,759 @@
+/*
+ * The film slips out of the gate. Shared by 404, the runtime error boundary and global-error.
+ * Logical properties only (fa mirrors). Moving parts animate transform/opacity only.
+ *
+ * Geometry: --D is the distance one frame roll travels (gate + frame line). The sprocket
+ * pitch is D / 10, so a roll advances the holes by exactly ten pitches and the loop is seamless.
+ */
+.stage {
+  --gh: clamp(12.5rem, min(44svh, 31vw), 34rem);
+  --bh: calc(var(--gh) * 0.17);
+  --D: calc(var(--gh) + var(--bh));
+  --pitch: calc(var(--D) / 10);
+  --colw: calc(var(--pitch) * 1.45);
+  --lamp: var(--teller-child);
+  --cycle: 9s;
+  --rest: 0.5;
+  --film: oklch(0.095 0.01 var(--hue, 215));
+  --lit: oklch(0.2 0.022 var(--hue, 215));
+
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: var(--colw) minmax(0, 1fr) var(--colw);
+  min-height: 100svh;
+  overflow: clip;
+  background: var(--stage-deep);
+  color: var(--ink);
+}
+.stage[data-variant="jammed"] {
+  --lamp: var(--teller-masked-lady);
+  --rest: 0.5;
+}
+.stage[data-variant="down"] {
+  --lamp: var(--teller-creature);
+  --rest: 0.82;
+}
+
+/* ── Sprocket columns ─────────────────────────────────────────────── */
+.strip {
+  position: relative;
+  overflow: hidden;
+  background: var(--film);
+  /* The fixed nav sits over the top of the strip; let the holes dim out beneath it. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 2.5rem, #000 6rem);
+  mask-image: linear-gradient(to bottom, transparent 2.5rem, #000 6rem);
+}
+.stage[data-masthead] .strip {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.stripStart {
+  border-inline-end: 1px solid var(--hairline);
+}
+.stripEnd {
+  border-inline-start: 1px solid var(--hairline);
+}
+.holes {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: calc(50% - var(--pitch) / 2);
+  width: var(--pitch);
+  /* Taller than the column by more than one roll (ten pitches) plus overshoot and pointer lean. */
+  height: calc(100% + var(--pitch) * 13);
+  background: color-mix(in oklab, var(--ink) 72%, var(--lamp));
+  opacity: 0.5;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='20' y='27' width='60' height='46' rx='9'/%3E%3C/svg%3E") 0 0 / 100% var(--pitch) repeat-y;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect x='20' y='27' width='60' height='46' rx='9'/%3E%3C/svg%3E") 0 0 / 100% var(--pitch) repeat-y;
+  will-change: transform;
+  animation: holes var(--cycle) infinite;
+  animation-delay: calc(var(--cycle) * -0.4);
+}
+
+/* ── Layout ───────────────────────────────────────────────────────── */
+.body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-block-start: clamp(4.5rem, 10svh, 6.5rem);
+}
+.stage[data-masthead] .body {
+  padding-block-start: clamp(1.25rem, 3svh, 2rem);
+}
+.masthead {
+  padding-inline: clamp(1rem, 4vw, 4rem);
+  padding-block-end: clamp(1rem, 3svh, 1.75rem);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+}
+
+/* ── Gate (the lit aperture) ──────────────────────────────────────── */
+.gate {
+  position: relative;
+  height: var(--gh);
+  overflow: hidden;
+  contain: paint;
+  background: var(--lit);
+  box-shadow:
+    inset 0 1px 0 var(--hairline),
+    inset 0 -1px 0 var(--hairline);
+}
+.nudge {
+  position: absolute;
+  inset: 0;
+}
+.weave {
+  position: absolute;
+  inset: 0;
+  animation: weave 0.75s steps(1, end) infinite;
+}
+.roll {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  height: calc(var(--gh) * 2 + var(--bh));
+  will-change: transform;
+  animation: roll var(--cycle) infinite;
+  animation-delay: calc(var(--cycle) * -0.4);
+}
+.plate {
+  display: grid;
+  align-items: center;
+  height: var(--gh);
+  padding-inline: clamp(1rem, 4vw, 4rem);
+}
+.num {
+  display: grid;
+  width: max-content;
+  font-family: var(--font-display);
+  font-size: min(calc(var(--gh) * 1.02), 42vw);
+  line-height: 0.78;
+  letter-spacing: -0.02em;
+  color: color-mix(in oklab, var(--ink) 90%, var(--lamp));
+  text-shadow: 0 0 calc(var(--gh) * 0.18) color-mix(in oklab, var(--lamp) 38%, transparent);
+}
+.numClean,
+.numErode {
+  grid-area: 1 / 1;
+}
+.numErode {
+  font-family: var(--font-display-100);
+  opacity: 0;
+  animation: erode var(--cycle) infinite;
+  animation-delay: calc(var(--cycle) * -0.4);
+}
+.numClean {
+  animation: heal var(--cycle) infinite;
+  animation-delay: calc(var(--cycle) * -0.4);
+}
+/* The frame line: a dark bar with lit edges, rolling up between two copies of the frame. */
+.bar {
+  position: relative;
+  height: var(--bh);
+  background: var(--film);
+}
+.bar::before,
+.bar::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 1px;
+  background: color-mix(in oklab, var(--lamp) 55%, var(--ink));
+  opacity: 0.32;
+}
+.bar::before {
+  inset-block-start: 0;
+}
+.bar::after {
+  inset-block-end: 0;
+}
+
+/* The lamp behind the gate, with its flicker. */
+.lamp {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 55% 100% at 50% 50%, color-mix(in oklab, var(--lamp) 26%, transparent), transparent 72%);
+  animation: flicker 0.9s steps(1, end) infinite;
+}
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 85% 120% at 50% 50%, transparent 55%, oklch(0.07 0.01 215 / 0.65) 100%);
+}
+.scratch {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 31%;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, oklch(0.93 0.012 80 / 0.7) 20%, oklch(0.93 0.012 80 / 0.5) 70%, transparent);
+  opacity: 0.1;
+  animation: scratch 4.3s steps(1, end) infinite;
+}
+/* Film burn: jammed variant only. */
+.burn {
+  display: none;
+}
+.stage[data-variant="jammed"] .burn {
+  display: block;
+  position: absolute;
+  inset-block-start: calc(var(--gh) * -0.25);
+  inset-inline-start: calc(62% - var(--gh) * 0.75);
+  width: calc(var(--gh) * 1.5);
+  height: calc(var(--gh) * 1.5);
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle,
+    oklch(0.94 0.07 88 / 0.9) 0%,
+    oklch(0.78 0.15 65 / 0.7) 20%,
+    oklch(0.55 0.17 38 / 0.42) 44%,
+    transparent 68%
+  );
+  transform: scale(0.85);
+  opacity: 0.62;
+  animation: burn 5.5s var(--ease-out-quint) 1.9s both;
+}
+
+/* ── Variants: jammed and down roll once, then hold stuck in the gate ── */
+.stage[data-variant="jammed"] .roll,
+.stage[data-variant="down"] .roll {
+  transform: translate3d(0, calc(var(--D) * var(--rest) * -1), 0);
+  animation: jam 2.6s steps(1, end) 0.5s both;
+}
+.stage[data-variant="jammed"] .holes,
+.stage[data-variant="down"] .holes {
+  transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -1), 0);
+  animation: jamHoles 2.6s steps(1, end) 0.5s both;
+}
+.stage[data-variant="jammed"] .weave,
+.stage[data-variant="down"] .weave {
+  animation: shudder 2.2s steps(1, end) 3.2s infinite;
+}
+.stage[data-variant="jammed"] .numErode,
+.stage[data-variant="down"] .numErode {
+  /* Stuck in the gate: eroded, but still readable as the numeral. */
+  font-family: var(--font-display-35);
+  opacity: 1;
+  animation: none;
+}
+.stage[data-variant="jammed"] .numClean,
+.stage[data-variant="down"] .numClean {
+  opacity: 0;
+  animation: none;
+}
+.stage[data-variant="down"] .lamp {
+  opacity: 0.4;
+  animation: dim 7s steps(1, end) infinite;
+}
+
+/* ── Copy ─────────────────────────────────────────────────────────── */
+.copy {
+  padding-inline: clamp(1rem, 4vw, 4rem);
+  padding-block: clamp(1.5rem, 4.5svh, 3rem) clamp(4.5rem, 9svh, 6rem);
+  max-width: 46rem;
+}
+/* Wide: the title stands on the start side, the words and actions on the end side. */
+@media (min-width: 56rem) {
+  .copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 1rem clamp(2rem, 6vw, 6rem);
+    max-width: none;
+  }
+  .copyBody .text {
+    margin-block-start: 0;
+  }
+}
+.eyebrow,
+.title,
+.text,
+.actions,
+.note {
+  animation: enter 0.7s var(--ease-out-quint) both;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--step--1);
+  line-height: 1.3;
+  color: var(--ink-dim);
+}
+/* A single sprocket hole as the marker, lit by the lamp. */
+.eyebrow::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.42rem;
+  border-radius: 1.5px;
+  background: var(--lamp);
+  box-shadow: 0 0 10px var(--lamp);
+}
+.title {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: var(--step-3);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  animation-delay: 0.08s;
+}
+.title:focus {
+  outline: none;
+}
+.text {
+  max-width: 40ch;
+  margin-block-start: 1.1rem;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+  animation-delay: 0.16s;
+}
+.text p {
+  margin: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 2.25rem;
+  margin-block-start: clamp(1.25rem, 3svh, 2rem);
+  animation-delay: 0.24s;
+}
+.actions > :is(a, button) {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin: 0;
+  padding: 0.35rem 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    color 0.15s linear,
+    transform 0.16s var(--ease-out-quint);
+}
+.actions > :is(a, button):active {
+  transform: scale(0.97);
+}
+/* Primary: Redaction text with a lamp hairline that draws in (no filled pills). */
+.actions > [data-primary] {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  line-height: 1.1;
+}
+.actions > [data-primary]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0.2rem;
+  height: 1px;
+  background: var(--lamp);
+  transform: scaleX(0.28);
+  transform-origin: left center;
+  transition: transform 0.45s var(--ease-out-quint);
+}
+[dir="rtl"] .actions > [data-primary]::after {
+  transform-origin: right center;
+}
+.actions > [data-primary]:focus-visible::after {
+  transform: scaleX(1);
+}
+.actions > [data-secondary] {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--step--1);
+  color: var(--ink-dim);
+}
+.actions > :is(a, button):focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+@media (hover: hover) {
+  .actions > [data-primary]:hover::after {
+    transform: scaleX(1);
+  }
+  .actions > [data-secondary]:hover {
+    color: var(--ink);
+  }
+}
+.note {
+  margin: 1.25rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  animation-delay: 0.32s;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Grain for pages rendered without the locale layout. */
+.grain {
+  position: absolute;
+  inset: -160px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
+  animation: grain 0.5s steps(1, end) infinite;
+}
+
+/* ── Phones and ultrawide ─────────────────────────────────────────── */
+@media (max-width: 40rem) {
+  .stage {
+    --gh: clamp(11rem, 30svh, 15rem);
+    --colw: calc(var(--pitch) * 1.2);
+  }
+  .actions {
+    gap: 0.25rem 1.75rem;
+  }
+}
+@media (min-width: 90rem) {
+  .stage {
+    --gh: clamp(16rem, min(46svh, 28vw), 40rem);
+  }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────── */
+/* Frame roll: hold, slip up through the gate with a little overshoot, settle on the next frame. */
+@keyframes roll {
+  0%,
+  56% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.55, 0.02, 0.25, 1);
+  }
+  74% {
+    transform: translate3d(0, calc(var(--D) * -1.035), 0);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
+  }
+  80% {
+    transform: translate3d(0, calc(var(--D) * -0.992), 0);
+    animation-timing-function: ease-out;
+  }
+  86%,
+  100% {
+    transform: translate3d(0, calc(var(--D) * -1), 0);
+  }
+}
+/* The sprocket holes travel the same distance (ten pitches), in step with the picture. */
+@keyframes holes {
+  0%,
+  56% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.55, 0.02, 0.25, 1);
+  }
+  74% {
+    transform: translate3d(0, calc(var(--pitch) * -10.35), 0);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
+  }
+  80% {
+    transform: translate3d(0, calc(var(--pitch) * -9.92), 0);
+    animation-timing-function: ease-out;
+  }
+  86%,
+  100% {
+    transform: translate3d(0, calc(var(--pitch) * -10), 0);
+  }
+}
+/* The numeral erodes while the film slips, then heals. */
+@keyframes erode {
+  0%,
+  54% {
+    opacity: 0;
+  }
+  64%,
+  76% {
+    opacity: 1;
+  }
+  88%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes heal {
+  0%,
+  54% {
+    opacity: 1;
+  }
+  64%,
+  76% {
+    opacity: 0;
+  }
+  88%,
+  100% {
+    opacity: 1;
+  }
+}
+/* Gate weave, stepped at 12 fps like the home reel. */
+@keyframes weave {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  11% {
+    transform: translate3d(0.7px, -0.9px, 0) rotate(0.03deg);
+  }
+  22% {
+    transform: translate3d(-0.5px, 0.5px, 0) rotate(-0.04deg);
+  }
+  33% {
+    transform: translate3d(0.3px, 1px, 0) rotate(0.02deg);
+  }
+  44% {
+    transform: translate3d(-0.8px, -0.4px, 0) rotate(-0.03deg);
+  }
+  55% {
+    transform: translate3d(0.5px, 0.2px, 0) rotate(0.04deg);
+  }
+  66% {
+    transform: translate3d(-0.3px, -1px, 0) rotate(-0.02deg);
+  }
+  77% {
+    transform: translate3d(0.9px, 0.6px, 0) rotate(0.01deg);
+  }
+  88% {
+    transform: translate3d(-0.6px, 0.3px, 0) rotate(-0.04deg);
+  }
+}
+@keyframes shudder {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  6% {
+    transform: translate3d(1.5px, -2px, 0) rotate(0.06deg);
+  }
+  8% {
+    transform: translate3d(-1px, 1.5px, 0);
+  }
+  10% {
+    transform: translate3d(0, 0, 0);
+  }
+  58% {
+    transform: translate3d(-1px, 1px, 0) rotate(-0.04deg);
+  }
+  60% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes flicker {
+  0% {
+    opacity: 1;
+  }
+  14% {
+    opacity: 0.86;
+  }
+  28% {
+    opacity: 0.97;
+  }
+  42% {
+    opacity: 0.9;
+  }
+  57% {
+    opacity: 1;
+  }
+  71% {
+    opacity: 0.84;
+  }
+  86% {
+    opacity: 0.95;
+  }
+}
+@keyframes dim {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  18% {
+    opacity: 0.22;
+  }
+  22% {
+    opacity: 0.46;
+  }
+  60% {
+    opacity: 0.3;
+  }
+  64% {
+    opacity: 0.12;
+  }
+  70% {
+    opacity: 0.38;
+  }
+}
+@keyframes scratch {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  14% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.16;
+  }
+  20% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  47% {
+    transform: translate3d(38vw, 0, 0);
+    opacity: 0.12;
+  }
+  52% {
+    transform: translate3d(38vw, 0, 0);
+    opacity: 0;
+  }
+  81% {
+    transform: translate3d(14vw, 0, 0);
+    opacity: 0.14;
+  }
+  85% {
+    transform: translate3d(14vw, 0, 0);
+    opacity: 0;
+  }
+}
+@keyframes grain {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-47px, 31px, 0);
+  }
+  40% {
+    transform: translate3d(63px, -52px, 0);
+  }
+  60% {
+    transform: translate3d(-28px, -71px, 0);
+  }
+  80% {
+    transform: translate3d(54px, 44px, 0);
+  }
+}
+/* Jammed: the film lurches in jerks and sticks with the frame line part way across the gate. */
+@keyframes jam {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  10% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -0.3), 0);
+  }
+  16% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -0.25), 0);
+  }
+  26% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -0.66), 0);
+  }
+  34% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -0.6), 0);
+  }
+  48% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -1.07), 0);
+  }
+  58% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -0.96), 0);
+  }
+  70%,
+  100% {
+    transform: translate3d(0, calc(var(--D) * var(--rest) * -1), 0);
+  }
+}
+@keyframes jamHoles {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  10% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -0.3), 0);
+  }
+  16% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -0.25), 0);
+  }
+  26% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -0.66), 0);
+  }
+  34% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -0.6), 0);
+  }
+  48% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -1.07), 0);
+  }
+  58% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -0.96), 0);
+  }
+  70%,
+  100% {
+    transform: translate3d(0, calc(var(--pitch) * 10 * var(--rest) * -1), 0);
+  }
+}
+@keyframes burn {
+  0% {
+    transform: scale(0.15);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.62;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+/* Off screen or hidden tab: freeze where it is. */
+.stage[data-idle] *,
+.stage[data-idle] *::before,
+.stage[data-idle] *::after {
+  animation-play-state: paused !important;
+}
+
+/*
+ * Calm: reduced motion, or the site's Pause motion. A static composed frame: hold position,
+ * sprocket holes in view, numeral clean (eroded for the stuck variants), copy simply present.
+ */
+.stage[data-calm] *,
+.stage[data-calm] *::before,
+.stage[data-calm] *::after {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage *,
+  .stage *::before,
+  .stage *::after {
+    animation: none !important;
+  }
+}

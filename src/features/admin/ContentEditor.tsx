@@ -10,7 +10,7 @@ import type { ContentLocale } from "@/shared/data/types";
 import { Badge, PanelFrame } from "./forms";
 import type { Notify } from "./parts";
 
-const NS_ORDER = ["home", "about", "contact", "support", "series", "footer", "nav", "archive", "category", "project", "login", "common"];
+const NS_ORDER = ["home", "about", "contact", "support", "series", "footer", "nav", "archive", "category", "project", "login", "errors", "common"];
 /** Where each namespace is visible on the public site. */
 const LIVE_PATH: Record<string, string> = {
   home: "/",
@@ -24,6 +24,7 @@ const LIVE_PATH: Record<string, string> = {
   category: "/projects",
   project: "/projects",
   login: "/login",
+  errors: "/this-page-does-not-exist",
   common: "/",
 };
 
