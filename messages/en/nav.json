@@ -1,5 +1,7 @@
 {
   "primary": "Primary",
+  "menu": "Menu",
+  "close": "Close",
   "work": "Work",
   "about": "About",
   "support": "Support",
