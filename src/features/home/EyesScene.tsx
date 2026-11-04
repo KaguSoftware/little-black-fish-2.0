@@ -33,6 +33,12 @@ export interface PupilPoint {
 const ACCENT = oklchToLinear(TELLER_BY_ID["snake-king"].accent);
 const RING_TILT = 1.02;
 const RING_ROLL = -0.34;
+/** How much of the section's height the standing figure fills (feet to crown). */
+const FIGURE_FRAC = 0.54;
+/** Fraction of the figure's width allowed on a narrow (portrait) screen. */
+const FIGURE_WIDTH = 0.7;
+/** The figure sits a little below centre so the title keeps clear of the head. */
+const FIGURE_DROP = 0.03;
 
 const DOT_VERT = /* glsl */ `
   attribute vec3 aColor;
@@ -164,18 +170,22 @@ function stepRig(
 
   vC.copy(vL).add(vR).multiplyScalar(0.5);
   const aspect = size.width / size.height;
-  const frac = aspect < 1 ? 0.58 : 0.3;
   const tanHalf = Math.tan((cam.fov * Math.PI) / 360);
-  const camD = eyeDist / frac / aspect / (2 * tanHalf);
+  // Frame the whole standing figure: tall enough for FIGURE_FRAC of the height, and never wider
+  // than FIGURE_WIDTH of a narrow screen.
+  const h = puppet.height;
+  const camD = Math.max(h / FIGURE_FRAC / (2 * tanHalf), (h * 0.5) / FIGURE_WIDTH / (aspect * 2 * tanHalf));
+  const viewH = 2 * camD * tanHalf;
+  const targetY = h * 0.5 + FIGURE_DROP * viewH;
   if (!S.started) {
     S.cx = vC.x;
-    S.cy = vC.y;
+    S.cy = targetY;
     S.cz = vC.z;
     S.camD = camD;
     S.started = true;
   } else {
     S.cx = damp(S.cx, vC.x, 4, dt);
-    S.cy = damp(S.cy, vC.y, 4, dt);
+    S.cy = damp(S.cy, targetY, 4, dt);
     S.cz = damp(S.cz, vC.z, 4, dt);
     S.camD = damp(S.camD, camD, 4, dt);
   }
@@ -219,7 +229,9 @@ function stepRig(
   inp.surprise = S.surprise;
   inp.frozen = ui.paused;
   inp.quality = ui.quality;
-  inp.lookAt!.set(S.cx + S.gx * d * 0.55, S.cy + S.gy * d * 0.38, S.cz + d);
+  // The head's look target scales with the eyes, so the turn feels the same as it did in the close-up.
+  const dEye = eyeDist / 0.3 / aspect / (2 * tanHalf);
+  inp.lookAt!.set(vC.x + S.gx * dEye * 0.55, vC.y + S.gy * dEye * 0.38, vC.z + dEye);
 
   // ── where the left pupil is on screen (for the iris) ──
   (puppet.rig.pupilL ?? puppet.rig.eyeAnchorL).getWorldPosition(vP);
@@ -235,14 +247,15 @@ function stepRig(
   }
   const rv = S.reveal * S.reveal;
   const lightDist = d * 1.08;
-  spot.position.set(S.cx, S.cy + d * 0.42, S.cz + d * 0.98);
-  spot.target.position.set(S.cx, S.cy, S.cz);
+  const midY = h * 0.5;
+  spot.position.set(S.cx, midY + d * 0.42, S.cz + d * 0.98);
+  spot.target.position.set(S.cx, midY, S.cz);
   spot.target.updateMatrixWorld();
-  spot.angle = clamp(Math.atan((eyeDist * 1.35) / lightDist), 0.1, 0.8);
+  spot.angle = clamp(Math.atan((h * 0.62) / lightDist), 0.1, 0.8);
   spot.penumbra = 1;
   spot.intensity = 7 * lightDist * lightDist * rv;
-  rim.position.set(S.cx + eyeDist * 1.7, S.cy + eyeDist * 0.5, S.cz + eyeDist * 0.9);
-  rim.intensity = 6 * eyeDist * eyeDist * rv;
+  rim.position.set(S.cx + h * 0.45, midY + h * 0.2, S.cz + h * 0.5);
+  rim.intensity = 6 * h * 0.4 * h * 0.4 * rv;
 
   // ── six accent dots orbit in a slow tilted ring ──
   const R = eyeDist * 1.08;
@@ -260,7 +273,7 @@ function stepRig(
     const lx = Math.cos(a);
     const ly = Math.sin(a) * cT;
     const lz = Math.sin(a) * sT;
-    posAttr.setXYZ(i, S.cx + (lx * cR - ly * sR) * R, S.cy + (lx * sR + ly * cR) * R * 0.92, S.cz + lz * R * 0.9 + eyeDist * 0.06);
+    posAttr.setXYZ(i, vC.x + (lx * cR - ly * sR) * R, vC.y + (lx * sR + ly * cR) * R * 0.92, vC.z + lz * R * 0.9 + eyeDist * 0.06);
   }
   posAttr.needsUpdate = true;
   const mat = dots.material as ShaderMaterial;

@@ -483,11 +483,11 @@ html[data-motion="paused"] .holdRing::after {
   position: absolute;
   z-index: 2;
   left: 50%;
-  top: 50%;
-  width: min(88vw, 900px);
-  height: min(36svh, 400px);
+  top: 53%;
+  width: min(60vw, 360px);
+  height: min(60svh, 640px);
   transform: translate(-50%, -50%);
-  border-radius: 50%;
+  border-radius: 45% 45% 12% 12%;
   cursor: pointer;
 }
 
