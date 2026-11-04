@@ -17,6 +17,7 @@ import { ProjectEditor } from "./ProjectEditor";
 import { HeroEditor } from "./HeroEditor";
 import { CategoryEditor } from "./CategoryEditor";
 import { SubmissionsPanel } from "./SubmissionsPanel";
+import { PasswordForm } from "./PasswordForm";
 import { Dashboard, type SectionId } from "./Dashboard";
 import { ContentEditor } from "./ContentEditor";
 import { SettingsPanel } from "./SettingsPanel";
@@ -403,6 +404,7 @@ export function AdminPanel({ data, locale }: { data: AdminData; locale: "en" | "
       />
 
       <PanelFrame id="account" labelledBy="adm-tab-account" hidden={tab !== "account"} title={t("nav.items.account")} sub={t("account.sub")}>
+        <PasswordForm />
         <form
           className="adm-account"
           action={signOut.bind(null, locale)}

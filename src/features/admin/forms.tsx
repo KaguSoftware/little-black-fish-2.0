@@ -50,6 +50,7 @@ export function TextField({
   rows,
   placeholder,
   type,
+  autoComplete,
   list,
   maxLength,
 }: {
@@ -63,7 +64,8 @@ export function TextField({
   multiline?: boolean;
   rows?: number;
   placeholder?: string;
-  type?: "text" | "url" | "email";
+  type?: "text" | "url" | "email" | "password";
+  autoComplete?: string;
   list?: string;
   maxLength?: number;
 }) {
@@ -88,6 +90,7 @@ export function TextField({
           <input
             {...common}
             type={type ?? "text"}
+            autoComplete={autoComplete}
             list={list}
             inputMode={type === "url" ? "url" : type === "email" ? "email" : undefined}
             onChange={(e) => onChange(e.target.value)}

@@ -157,6 +157,12 @@ text-align:start;cursor:pointer;color:var(--ink);transition:color .12s linear,bo
 .adm-audit-meta{display:inline-flex;flex-wrap:wrap;gap:0 .9rem;color:var(--ink-mute);font-variant-numeric:tabular-nums}
 .adm-quick{margin:.75rem 0 0;padding:0;list-style:none;display:grid}
 .adm-account{margin:0;padding-top:1rem}
+.adm-pw{display:grid;gap:1rem;max-width:26rem;margin:0 0 2.5rem}
+.adm-pw-msg{margin:0;font-size:var(--step--1)}
+.adm-pw-msg[data-kind="ok"]{color:var(--accent)}
+.adm-pw-msg[data-kind="error"]{color:oklch(0.72 0.17 25)}
+.adm-pw .lbf-cta{justify-self:start}
+.adm-pw .lbf-cta:disabled{opacity:.5;cursor:not-allowed}
 
 @media (prefers-reduced-motion:reduce){
 .adm-savebar{animation-name:adm-fade;animation-duration:.2s}

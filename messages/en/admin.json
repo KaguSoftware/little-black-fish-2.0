@@ -214,12 +214,31 @@
       "settings": "Settings",
       "media": "Media",
       "inbox": "Messages",
-      "account": "Sign out"
+      "account": "Account"
     }
   },
   "account": {
     "sub": "You are signed in as an administrator.",
-    "confirmUnsaved": "You have unsaved changes. Sign out anyway?"
+    "confirmUnsaved": "You have unsaved changes. Sign out anyway?",
+    "password": {
+      "title": "Change password",
+      "hint": "Choose a password only you know. Use at least {min} characters.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat new password",
+      "rules": "At least {min} characters.",
+      "submit": "Change password",
+      "saving": "Saving...",
+      "done": "Password changed. Use the new one next time you sign in.",
+      "errors": {
+        "wrongCurrent": "The current password is not correct.",
+        "tooShort": "The new password needs at least {min} characters.",
+        "tooLong": "The new password is too long (max {max} characters).",
+        "same": "The new password must be different from the current one.",
+        "mismatch": "The two new passwords do not match.",
+        "failed": "Could not change the password. Try again."
+      }
+    }
   },
   "dashboard": {
     "sub": "What is on the site, and what changed lately.",
