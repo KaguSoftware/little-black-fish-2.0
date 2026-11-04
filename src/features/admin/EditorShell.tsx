@@ -18,7 +18,7 @@ interface Props {
   children: ReactNode;
 }
 
-/** The inline editor frame: focusable heading, form body, a foot with Cancel + a Redaction CTA. */
+/** The editor frame, shown as a modal dialog: sticky heading, scrolling form body, sticky foot with Cancel + a Redaction CTA. */
 export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel, onSubmit, footStart, children }: Props) {
   const t = useTranslations("admin");
   const headingId = useId();
@@ -29,16 +29,17 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
     return () => reportDirty(false);
   }, [dirty, reportDirty]);
 
+  const dialog = useRef<HTMLDialogElement>(null);
+  // Mounting the editor opens the modal (the list unmounts it to close it).
   useEffect(() => {
-    const el = heading.current;
-    if (!el) return;
-    el.focus({ preventScroll: true });
-    const top = el.getBoundingClientRect().top;
-    if (top < 64 || top > window.innerHeight * 0.6) {
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
-    }
+    const d = dialog.current;
+    if (!d) return;
+    if (!d.open) d.showModal();
+    heading.current?.focus({ preventScroll: true });
   }, []);
+
+  /** A press that STARTED on the backdrop: a text selection dragged out of the box must not close it. */
+  const downOnBackdrop = useRef(false);
 
   const cancel = () => {
     if (dirty && !window.confirm(t("discardChanges"))) return;
@@ -51,17 +52,25 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
   };
 
   return (
-    <section
+    <dialog
+      ref={dialog}
+      className="adm-modal"
       aria-labelledby={headingId}
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && !e.defaultPrevented) {
-          e.preventDefault();
-          cancel();
-        }
+      onCancel={(e) => {
+        // Esc: route through the same unsaved-changes check as Close.
+        e.preventDefault();
+        if (!saving) cancel();
+      }}
+      onPointerDown={(e) => {
+        downOnBackdrop.current = e.target === dialog.current;
+      }}
+      onClick={(e) => {
+        if (e.target === dialog.current && downOnBackdrop.current && !saving) cancel();
+        downOnBackdrop.current = false;
       }}
     >
       <div className="adm-editor-head">
-        <h3 className="adm-editor-title" id={headingId} ref={heading} tabIndex={-1} style={{ scrollMarginTop: "6rem" }}>
+        <h3 className="adm-editor-title" id={headingId} ref={heading} tabIndex={-1}>
           {title}
         </h3>
         <button type="button" className="lbf-textbtn" onClick={cancel}>
@@ -69,7 +78,7 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
         </button>
       </div>
       <form className="adm-form" onSubmit={submit} noValidate>
-        {children}
+        <div className="adm-form-body">{children}</div>
         <div className="adm-form-foot">
           {footStart}
           <div className="adm-form-foot-acts">
@@ -80,12 +89,12 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
               <span>{saving ? t("saving") : submitLabel}</span>
             </button>
           </div>
+          <p className="lbf-error adm-form-error" role="alert">
+            {error}
+          </p>
         </div>
-        <p className="lbf-error" role="alert">
-          {error}
-        </p>
       </form>
-    </section>
+    </dialog>
   );
 }
 
