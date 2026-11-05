@@ -1,63 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { getYouTubeId, youTubeThumb } from "@/shared/data/youtube";
 import { isVideoUrl } from "@/shared/data/storage";
+import { ToastStack, toast } from "./toast";
 
-/* ---------- Notices: one quiet line under the tabs, polite for success, an alert for errors. ---------- */
+/* ---------- Notices: toasts (see toast.tsx). `notify.ok/fail` keep working; `undo` is the new option. ---------- */
 
-export type Notice = { kind: "ok" | "error"; text: string; id: number } | null;
-export interface Notify {
-  ok: (text: string) => void;
-  fail: (text: string) => void;
+export interface NotifyOptions {
+  /** Shows an Undo button on the toast (about 8 s). */
+  undo?: () => void;
+  /** ms; 0 = stay until dismissed. */
+  duration?: number;
+  /** Runs when the toast ends without Undo (use it to commit a deferred action). */
+  onExpire?: () => void;
 }
+export interface Notify {
+  ok: (text: string, options?: NotifyOptions) => void;
+  fail: (text: string, options?: NotifyOptions) => void;
+}
+
+/** Kept for existing callers: `notice` is unused state now; toasts live in the shared store. */
+export type Notice = null;
+
+const NOTIFY: Notify = {
+  ok: (text, o) => void toast({ kind: "ok", text, ...o }),
+  fail: (text, o) => void toast({ kind: "error", text, ...o }),
+};
 
 export function useNotice() {
-  const [notice, setNotice] = useState<Notice>(null);
-  const timer = useRef<number | undefined>(undefined);
-  const seq = useRef(0);
-
-  const show = useCallback((kind: "ok" | "error", text: string) => {
-    window.clearTimeout(timer.current);
-    seq.current += 1;
-    setNotice({ kind, text, id: seq.current });
-    if (kind === "ok") timer.current = window.setTimeout(() => setNotice(null), 5000);
-  }, []);
-
-  useEffect(() => () => window.clearTimeout(timer.current), []);
-
-  const notify = useMemo<Notify>(
-    () => ({ ok: (t) => show("ok", t), fail: (t) => show("error", t) }),
-    [show],
-  );
-  const clear = useCallback(() => setNotice(null), []);
-  return { notice, notify, clear };
+  // Toasts outlive section switches (an Undo must stay reachable), so clear() no longer closes them.
+  const clear = useCallback(() => {}, []);
+  return { notice: null as Notice, notify: NOTIFY, clear };
 }
 
-export function NoticeLine({ notice, onDismiss }: { notice: Notice; onDismiss: () => void }) {
-  const t = useTranslations("admin");
-  return (
-    <div className="adm-notice">
-      <div role="status" aria-live="polite">
-        {notice?.kind === "ok" && (
-          <span key={notice.id} className="adm-notice-line" data-kind="ok">
-            {notice.text}
-          </span>
-        )}
-      </div>
-      <div role="alert">
-        {notice?.kind === "error" && (
-          <span key={notice.id} className="adm-notice-line" data-kind="error">
-            <span>{notice.text}</span>
-            <button type="button" className="lbf-textbtn" onClick={onDismiss}>
-              {t("dismiss")}
-            </button>
-          </span>
-        )}
-      </div>
-    </div>
-  );
+/** Renders the toast stack (bottom-center). Props are kept for compatibility with older callers. */
+export function NoticeLine(_props: { notice?: Notice; onDismiss?: () => void }) {
+  void _props;
+  return <ToastStack />;
 }
 
 /* ---------- Thumbnails ---------- */

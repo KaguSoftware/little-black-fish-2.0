@@ -164,6 +164,12 @@ export interface MediaItem {
   usedBy: string[];
 }
 
+/** One page of listMedia; nextOffset is null on the last page. */
+export interface MediaPage {
+  items: MediaItem[];
+  nextOffset: number | null;
+}
+
 export interface AdminData {
   projects: ProjectRow[];
   heroSlides: HeroSlideRow[];

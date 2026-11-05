@@ -5,10 +5,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { formatNumber } from "@/shared/data/localize";
 import type { ContentEntry } from "@/shared/actions/admin/types";
-import { resetContent, saveContent } from "@/shared/actions/admin/content";
 import type { ContentLocale } from "@/shared/data/types";
 import { Badge, PanelFrame } from "./forms";
 import type { Notify } from "./parts";
+import { useAdminActions } from "./actions-seam";
+import { Icon } from "./icons-ux";
+import { SaveBar } from "./ux";
 
 const NS_ORDER = ["home", "about", "contact", "support", "series", "footer", "nav", "archive", "category", "project", "login", "errors", "common"];
 /** Where each namespace is visible on the public site. */
@@ -35,24 +37,48 @@ const CHUNK = 500;
 const dk = (loc: ContentLocale, key: string) => `${loc}:${key}`;
 const isLong = (s: string) => s.length > 80 || s.includes("\n");
 const tokens = (s: string) => (s.match(/\{[^{}]*\}|<\/?[a-z][a-z0-9]*>/gi) ?? []).sort().join("|");
+const groupOf = (path: string) => (path.includes(".") ? path.slice(0, path.indexOf(".")) : "");
+
+/** "heroTitle" / "hero_title" -> "Hero title"; list positions become 1-based "#2". */
+function humanize(seg: string): string {
+  if (/^\d+$/.test(seg)) return "#" + (Number(seg) + 1);
+  const words = seg
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+export const humanPath = (path: string) => path.split(".").map(humanize).join(" › ");
 
 type Overlay = Record<string, { value: string; overridden: boolean }>;
 
-/** Everything on the public site that is plain text, both languages side by side. */
+/** Asks the editor to show a page, or to jump to one text (from the quick find or the dashboard). */
+export interface ContentRequest {
+  n: number;
+  ns?: string;
+  query?: string;
+  focusKey?: string;
+}
+
+/** Everything on the public site that is plain text, both languages side by side, page by page. */
 export function ContentEditor({
   entries,
   notify,
   hidden,
   labelledBy,
   onDirty,
+  request,
 }: {
   entries: ContentEntry[];
   notify: Notify;
   hidden: boolean;
   labelledBy: string;
   onDirty: (dirty: boolean) => void;
+  request?: ContentRequest | null;
 }) {
   const t = useTranslations("admin");
+  const actions = useAdminActions();
   const router = useRouter();
   const [, startRefresh] = useTransition();
   const searchId = useId();
@@ -70,12 +96,52 @@ export function ContentEditor({
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [modifiedOnly, setModifiedOnly] = useState(false);
-  /** Key of the row holding focus: the "Modified only" filter must not drop it while it is edited. */
+  /** Key of the row holding focus: the "edited only" filter must not drop it while it is edited. */
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [open, setOpen] = useState<Set<string>>(() => new Set());
+  const [openMap, setOpenMap] = useState<Map<string, boolean>>(() => new Map());
   const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(0);
   const [busyReset, setBusyReset] = useState<string | null>(null);
+  const [pageBusy, setPageBusy] = useState(false);
   const [limit, setLimit] = useState(SEARCH_CAP);
+  const [seenReq, setSeenReq] = useState(0);
+  const [focusTarget, setFocusTarget] = useState<string | null>(null);
+
+  const byKey = useMemo(() => new Map(entries.map((e) => [e.key, e])), [entries]);
+
+  // A jump from the quick find / dashboard: show that page (or that exact text).
+  if (request && request.n !== seenReq) {
+    setSeenReq(request.n);
+    const target = request.focusKey ? byKey.get(request.focusKey) : undefined;
+    const nextNs = target?.namespace ?? request.ns;
+    if (nextNs) setNs(nextNs);
+    setQuery(request.query ?? "");
+    setModifiedOnly(false);
+    if (target) {
+      setOpenMap((m) => new Map(m).set(`${target.namespace}|${groupOf(target.path)}`, true));
+      setFocusTarget(target.key);
+    }
+  }
+  useEffect(() => {
+    if (!focusTarget || hidden) return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        const row = document.querySelector<HTMLElement>(`[data-ckey="${CSS.escape(focusTarget)}"]`);
+        if (row) {
+          row.scrollIntoView({ block: "center" });
+          row.querySelector<HTMLElement>("input,textarea")?.focus({ preventScroll: true });
+          row.dataset.found = "true";
+          window.setTimeout(() => delete row.dataset.found, 2200);
+        }
+        setFocusTarget(null);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [focusTarget, hidden]);
 
   const namespaces = useMemo(() => {
     const counts = new Map<string, number>();
@@ -89,6 +155,7 @@ export function ContentEditor({
   }, [entries]);
 
   const activeNs = ns && namespaces.some((n) => n.name === ns) ? ns : (namespaces[0]?.name ?? "");
+  const nsName = useCallback((name: string) => (t.has(`content.ns.${name}`) ? t(`content.ns.${name}`) : humanize(name)), [t]);
 
   const effective = useCallback(
     (e: ContentEntry, loc: ContentLocale) => {
@@ -110,14 +177,10 @@ export function ContentEditor({
 
   const setDraft = useCallback((e: ContentEntry, loc: ContentLocale, value: string) => {
     const k = dk(loc, e.key);
-    setDrafts((d) => {
-      const copy = { ...d };
-      copy[k] = value;
-      return copy;
-    });
+    setDrafts((d) => ({ ...d, [k]: value }));
   }, []);
 
-  // Drop a draft that equals the effective text again (done at render of Row via revert, and here on change).
+  // Typing the original text back removes the draft.
   const normalizeDraft = useCallback(
     (e: ContentEntry, loc: ContentLocale, value: string) => {
       const k = dk(loc, e.key);
@@ -143,31 +206,62 @@ export function ContentEditor({
     });
   }, []);
 
-  const reset = useCallback(
-    async (e: ContentEntry, loc: ContentLocale) => {
-      if (!window.confirm(t("content.confirmReset"))) return;
-      const k = dk(loc, e.key);
-      setBusyReset(k);
+  const defaultOf = (e: ContentEntry, loc: ContentLocale) => (loc === "en" ? e.enDefault : e.faDefault);
+
+  /** Writes values straight to the server (used by Undo of a reset). */
+  const restore = useCallback(
+    async (items: { e: ContentEntry; loc: ContentLocale; value: string }[]) => {
       try {
-        const res = await resetContent(e.key, loc);
-        if (res.success) {
-          setOverlay((o) => ({ ...o, [k]: { value: loc === "en" ? e.enDefault : e.faDefault, overridden: false } }));
-          revert(e, loc);
-          notify.ok(t("content.resetDone"));
-          startRefresh(() => router.refresh());
-        } else notify.fail(t("saveFailed", { error: res.error }));
+        const res = await actions.saveContent(items.map((i) => ({ key: i.e.key, locale: i.loc, value: i.value })));
+        if (!res.success) return notify.fail(t("saveFailed"));
+        setOverlay((o) => {
+          const copy = { ...o };
+          for (const i of items) copy[dk(i.loc, i.e.key)] = { value: i.value, overridden: i.value !== defaultOf(i.e, i.loc) };
+          return copy;
+        });
+        startRefresh(() => router.refresh());
       } catch {
-        notify.fail(t("saveFailed", { error: t("networkError") }));
-      } finally {
-        setBusyReset(null);
+        notify.fail(t("saveFailed"));
       }
     },
-    [notify, revert, router, t],
+    [actions, notify, router, t],
   );
 
-  const byKey = useMemo(() => new Map(entries.map((e) => [e.key, e])), [entries]);
+  /** Back to the built-in text. Instant, with Undo (nothing is lost: Undo writes the old text back). */
+  const resetMany = useCallback(
+    async (items: { e: ContentEntry; loc: ContentLocale }[], single: boolean) => {
+      if (!items.length) return;
+      const prev = items.map((i) => ({ ...i, value: effective(i.e, i.loc) }));
+      const first = items[0];
+      if (single) setBusyReset(dk(first.loc, first.e.key));
+      else setPageBusy(true);
+      try {
+        for (let i = 0; i < items.length; i += 8) {
+          const batch = items.slice(i, i + 8);
+          const results = await Promise.all(batch.map((it) => actions.resetContent(it.e.key, it.loc)));
+          if (results.some((r) => !r.success)) throw new Error("reset");
+        }
+        setOverlay((o) => {
+          const copy = { ...o };
+          for (const i of items) copy[dk(i.loc, i.e.key)] = { value: defaultOf(i.e, i.loc), overridden: false };
+          return copy;
+        });
+        items.forEach((i) => revert(i.e, i.loc));
+        notify.ok(single ? t("content.resetDone") : t("content.pageResetDone", { count: items.length }), { undo: () => void restore(prev) });
+        startRefresh(() => router.refresh());
+      } catch {
+        notify.fail(t("saveFailed"));
+      } finally {
+        setBusyReset(null);
+        setPageBusy(false);
+      }
+    },
+    [actions, effective, notify, restore, revert, router, t],
+  );
 
-  const saveAll = async () => {
+  const reset = useCallback((e: ContentEntry, loc: ContentLocale) => resetMany([{ e, loc }], true), [resetMany]);
+
+  const saveAll = useCallback(async () => {
     const pending = Object.entries(drafts).map(([k, value]) => {
       const loc = k.slice(0, 2) as ContentLocale;
       return { key: k.slice(3), locale: loc, value };
@@ -178,9 +272,9 @@ export function ContentEditor({
     try {
       for (let i = 0; i < pending.length; i += CHUNK) {
         const chunk = pending.slice(i, i + CHUNK);
-        const res = await saveContent(chunk);
+        const res = await actions.saveContent(chunk);
         if (!res.success) {
-          notify.fail(t("saveFailed", { error: res.error }));
+          notify.fail(t("saveFailed"));
           break;
         }
         done += chunk.length;
@@ -200,17 +294,20 @@ export function ContentEditor({
           return copy;
         });
       }
-      if (done === pending.length) notify.ok(t("content.saved", { count: done }));
+      if (done === pending.length) setSavedAt(Date.now());
       if (done > 0) startRefresh(() => router.refresh());
     } catch {
-      notify.fail(t("saveFailed", { error: t("networkError") }));
+      notify.fail(t("saveFailed"));
     } finally {
       setSaving(false);
     }
-  };
+  }, [actions, byKey, drafts, notify, router, t]);
 
   const discardAll = () => {
-    if (window.confirm(t("content.confirmDiscardAll", { count: draftCount }))) setDrafts({});
+    const prev = drafts;
+    const count = Object.keys(prev).length;
+    setDrafts({});
+    notify.ok(t("content.discarded", { count }), { undo: () => setDrafts(prev) });
   };
 
   const q = deferredQuery.trim().toLowerCase();
@@ -231,7 +328,7 @@ export function ContentEditor({
         e.faDefault.toLowerCase().includes(q)
       );
     });
-    // drafts intentionally read at filter time only for the modified-only view
+    // drafts intentionally read at filter time only for the edited-only view
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries, searching, activeNs, q, modifiedOnly, overridden, effective, modifiedOnly ? drafts : null, focusKey]);
 
@@ -239,7 +336,7 @@ export function ContentEditor({
     if (searching) return [];
     const m = new Map<string, ContentEntry[]>();
     for (const e of visible) {
-      const g = e.path.includes(".") ? e.path.slice(0, e.path.indexOf(".")) : "";
+      const g = groupOf(e.path);
       (m.get(g) ?? m.set(g, []).get(g)!).push(e);
     }
     return [...m.entries()].map(([name, list]) => ({ name, list }));
@@ -251,22 +348,26 @@ export function ContentEditor({
     return m;
   }, [entries, overridden]);
 
-  const toggleGroup = (id: string) =>
-    setOpen((s) => {
-      const copy = new Set(s);
-      if (copy.has(id)) copy.delete(id);
-      else copy.add(id);
-      return copy;
-    });
-
-  const locale = useLocale();
+  const locale = useLocale() as "en" | "fa";
   const num = (n: number) => formatNumber(n, locale);
+
+  const pageEdited = activeNs ? (modifiedByNs.get(activeNs) ?? 0) : 0;
+  const resetPage = () => {
+    const items: { e: ContentEntry; loc: ContentLocale }[] = [];
+    for (const e of entries) {
+      if (e.namespace !== activeNs) continue;
+      if (overridden(e, "en")) items.push({ e, loc: "en" });
+      if (overridden(e, "fa")) items.push({ e, loc: "fa" });
+    }
+    void resetMany(items, false);
+  };
 
   const renderRow = (e: ContentEntry, showNs: boolean) => (
     <ContentRow
       key={e.key}
       entry={e}
-      showNs={showNs}
+      label={showNs ? `${nsName(e.namespace)} › ${humanPath(e.path)}` : humanPath(e.path.includes(".") ? e.path.slice(e.path.indexOf(".") + 1) : e.path)}
+      showKey={showNs}
       en={drafts[dk("en", e.key)] ?? effective(e, "en")}
       fa={drafts[dk("fa", e.key)] ?? effective(e, "fa")}
       enDraft={dk("en", e.key) in drafts}
@@ -281,8 +382,45 @@ export function ContentEditor({
     />
   );
 
+  const partName = (name: string) => (!name ? t("content.general") : t.has(`content.parts.${name}`) ? t(`content.parts.${name}`) : humanize(name));
+
   return (
-    <PanelFrame id="content" labelledBy={labelledBy} hidden={hidden} title={t("content.title")} sub={t("content.sub")}>
+    <PanelFrame
+      id="content"
+      labelledBy={labelledBy}
+      hidden={hidden}
+      title={t("content.title")}
+      sub={t("content.sub")}
+      viewPath={!searching && activeNs ? null : "/"}
+    >
+      <div className="ux-pages" role="group" aria-label={t("content.namespaces")}>
+        {namespaces.map((n) => {
+          const mod = modifiedByNs.get(n.name) ?? 0;
+          const sel = !searching && n.name === activeNs;
+          return (
+            <button
+              key={n.name}
+              type="button"
+              className="ux-page"
+              aria-pressed={sel}
+              onClick={() => {
+                setNs(n.name);
+                setQuery("");
+              }}
+            >
+              <Icon name="page" className="ux-page-ico" />
+              <span className="ux-page-name">{nsName(n.name)}</span>
+              {mod > 0 && (
+                <span className="ux-page-mod" title={t("content.modifiedCount", { count: mod })}>
+                  <span className="sr-only">{t("content.modifiedCount", { count: mod })}</span>
+                  <span aria-hidden="true">{num(mod)}</span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="adm-ctools">
         <div className="lbf-field adm-csearch">
           <label className="lbf-label" htmlFor={searchId}>
@@ -307,43 +445,29 @@ export function ContentEditor({
         </label>
       </div>
 
-      <div className="adm-chips" role="group" aria-label={t("content.namespaces")}>
-        {namespaces.map((n) => {
-          const mod = modifiedByNs.get(n.name) ?? 0;
-          const sel = !searching && n.name === activeNs;
-          return (
-            <button
-              key={n.name}
-              type="button"
-              className="adm-chip"
-              aria-pressed={sel}
-              onClick={() => {
-                setNs(n.name);
-                setQuery("");
-              }}
-            >
-              {t.has(`content.ns.${n.name}`) ? t(`content.ns.${n.name}`) : n.name}
-              <span className="adm-chip-n">
-                {num(n.count)}
-                {mod > 0 && <span className="adm-chip-mod"> · {t("content.modifiedCount", { count: mod })}</span>}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {!searching && activeNs && (
+        <div className="ux-pagecard">
+          <div className="ux-pagecard-text">
+            <h3 className="ux-h3">{nsName(activeNs)}</h3>
+            <p className="adm-sub">{t.has(`content.nsDesc.${activeNs}`) ? t(`content.nsDesc.${activeNs}`) : t("content.nsDescFallback")}</p>
+          </div>
+          <div className="ux-acts">
+            <Link href={LIVE_PATH[activeNs] ?? "/"} target="_blank" rel="noopener" className="ux-btn" data-quiet="true">
+              {t("content.viewLive")}
+              <Icon name="external" className="ux-btn-ico" />
+              <span className="sr-only"> ({t("opensNewTab")})</span>
+            </Link>
+            {pageEdited > 0 && (
+              <button type="button" className="ux-btn" data-quiet="true" onClick={resetPage} disabled={pageBusy} aria-busy={pageBusy}>
+                {pageBusy ? t("content.resetting") : t("content.resetPage", { count: pageEdited })}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="adm-cmeta" role="status" aria-live="polite">
-        <span>
-          {searching
-            ? t("content.results", { count: visible.length })
-            : t("content.inNamespace", { count: visible.length })}
-        </span>
-        {!searching && activeNs && (
-          <Link href={LIVE_PATH[activeNs] ?? "/"} target="_blank" rel="noopener" className="lbf-textbtn">
-            {t("content.viewLive")}
-            <span className="sr-only"> ({t("opensNewTab")})</span>
-          </Link>
-        )}
+        <span>{searching ? t("content.results", { count: visible.length }) : t("content.inNamespace", { count: visible.length })}</span>
       </div>
 
       <div
@@ -351,63 +475,70 @@ export function ContentEditor({
         onFocus={(ev) => setFocusKey((ev.target as HTMLElement).closest<HTMLElement>("[data-ckey]")?.dataset.ckey ?? null)}
         onBlur={() => setFocusKey(null)}
       >
-      {visible.length === 0 ? (
-        <div className="adm-empty">
-          <p className="adm-empty-title">{searching ? t("content.noResultsTitle") : t("content.emptyTitle")}</p>
-          <p className="adm-empty-text">{searching ? t("content.noResultsText") : t("content.emptyText")}</p>
-        </div>
-      ) : searching ? (
-        <div className="adm-crows">
-          {visible.slice(0, limit).map((e) => renderRow(e, true))}
-          {visible.length > limit && (
-            <button type="button" className="lbf-textbtn adm-more" onClick={() => setLimit((l) => l + SEARCH_CAP)}>
-              {t("content.showMore", { count: visible.length - limit })}
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="adm-cgroups">
-          {groups.map((g) => {
-            const gid = `${activeNs}|${g.name}`;
-            const isOpen = open.has(gid);
-            const mods = g.list.filter((e) => overridden(e, "en") || overridden(e, "fa")).length;
-            const unsaved = g.list.filter((e) => dk("en", e.key) in drafts || dk("fa", e.key) in drafts).length;
-            return (
-              <section key={gid} className="adm-cgroup" data-open={isOpen ? "true" : "false"}>
-                <h3 className="adm-cgroup-h">
-                  <button type="button" className="adm-cgroup-btn" aria-expanded={isOpen} onClick={() => toggleGroup(gid)}>
-                    <span className="adm-cgroup-caret" aria-hidden="true" />
-                    <span className="adm-cgroup-name" dir="ltr">
-                      {g.name || t("content.general")}
-                    </span>
-                    <span className="adm-cgroup-n">
-                      {num(g.list.length)}
-                      {mods > 0 && ` · ${t("content.modifiedCount", { count: mods })}`}
-                      {unsaved > 0 && ` · ${t("content.unsavedCount", { count: unsaved })}`}
-                    </span>
-                  </button>
-                </h3>
-                {isOpen && <GroupBody list={g.list} render={renderRow} />}
-              </section>
-            );
-          })}
-        </div>
-      )}
+        {visible.length === 0 ? (
+          <div className="adm-empty">
+            <p className="adm-empty-title">{searching ? t("content.noResultsTitle") : t("content.emptyTitle")}</p>
+            <p className="adm-empty-text">{searching ? t("content.noResultsText") : t("content.emptyText")}</p>
+          </div>
+        ) : searching ? (
+          <div className="adm-crows">
+            {visible.slice(0, limit).map((e) => renderRow(e, true))}
+            {visible.length > limit && (
+              <button type="button" className="ux-btn adm-more" onClick={() => setLimit((l) => l + SEARCH_CAP)}>
+                {t("content.showMore", { count: visible.length - limit })}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="adm-cgroups">
+            {groups.map((g, gi) => {
+              const gid = `${activeNs}|${g.name}`;
+              const mods = g.list.filter((e) => overridden(e, "en") || overridden(e, "fa")).length;
+              const unsaved = g.list.filter((e) => dk("en", e.key) in drafts || dk("fa", e.key) in drafts).length;
+              const isOpen = openMap.get(gid) ?? (groups.length <= 3 || gi === 0 || unsaved > 0);
+              const first = effective(g.list[0], locale);
+              return (
+                <section key={gid} className="adm-cgroup" data-open={isOpen ? "true" : "false"}>
+                  <h3 className="adm-cgroup-h">
+                    <button
+                      type="button"
+                      className="adm-cgroup-btn"
+                      aria-expanded={isOpen}
+                      onClick={() => setOpenMap((m) => new Map(m).set(gid, !isOpen))}
+                    >
+                      <span className="adm-cgroup-caret" aria-hidden="true" />
+                      <span className="ux-cg-name">{partName(g.name)}</span>
+                      {!isOpen && first && (
+                        <span className="ux-cg-peek" dir="auto">
+                          {first.length > 70 ? first.slice(0, 70) + "…" : first}
+                        </span>
+                      )}
+                      <span className="adm-cgroup-n">
+                        {mods > 0 && <span className="ux-cg-mod">{t("content.modifiedCount", { count: mods })}</span>}
+                        {unsaved > 0 && <span className="ux-cg-uns">{t("content.unsavedCount", { count: unsaved })}</span>}
+                        <span>{num(g.list.length)}</span>
+                      </span>
+                    </button>
+                  </h3>
+                  {isOpen && <GroupBody list={g.list} render={renderRow} />}
+                </section>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {draftCount > 0 && (
-        <div className="adm-savebar" role="region" aria-label={t("content.saveBar")}>
-          <span className="adm-bar-text">{saving ? t("saving") : t("content.unsaved", { count: draftCount })}</span>
-          <span className="adm-bar-acts">
-            <button type="button" className="lbf-textbtn" onClick={discardAll} disabled={saving}>
-              {t("content.discardAll")}
-            </button>
-            <button type="button" className="lbf-cta" onClick={saveAll} disabled={saving}>
-              <span>{t("content.saveN", { count: draftCount })}</span>
-            </button>
-          </span>
-        </div>
-      )}
+      <SaveBar
+        dirty={draftCount > 0}
+        saving={saving}
+        savedAt={savedAt}
+        summary={t("content.unsaved", { count: draftCount })}
+        saveLabel={t("content.saveN", { count: draftCount })}
+        onSave={saveAll}
+        onDiscard={discardAll}
+        active={!hidden}
+        label={t("content.saveBar")}
+      />
     </PanelFrame>
   );
 }
@@ -419,7 +550,7 @@ function GroupBody({ list, render }: { list: ContentEntry[]; render: (e: Content
     <div className="adm-crows">
       {list.slice(0, shown).map((e) => render(e, false))}
       {list.length > shown && (
-        <button type="button" className="lbf-textbtn adm-more" onClick={() => setShown((s) => s + PAGE)}>
+        <button type="button" className="ux-btn adm-more" onClick={() => setShown((s) => s + PAGE)}>
           {t("content.showMore", { count: list.length - shown })}
         </button>
       )}
@@ -429,7 +560,8 @@ function GroupBody({ list, render }: { list: ContentEntry[]; render: (e: Content
 
 interface RowProps {
   entry: ContentEntry;
-  showNs: boolean;
+  label: string;
+  showKey: boolean;
   en: string;
   fa: string;
   enDraft: boolean;
@@ -474,22 +606,22 @@ const ContentRow = memo(function ContentRow(p: RowProps) {
       <div className="lbf-field adm-clane" data-draft={draft ? "true" : "false"}>
         <label className="lbf-label" htmlFor={inputId}>
           {loc === "en" ? t("langEn") : t("langFa")}
-          <span className="sr-only"> — {e.key}</span>
+          <span className="sr-only"> — {p.label}</span>
         </label>
         {long ? <textarea {...common} rows={Math.min(8, Math.max(3, Math.ceil(value.length / 60)))} /> : <input {...common} type="text" />}
         <div className="adm-cmeta-line" id={`${inputId}-meta`}>
-          {mod && <Badge tone="accent">{t("content.modified")}</Badge>}
+          {mod && !draft && <Badge tone="accent">{t("content.modified")}</Badge>}
           {draft && <Badge tone="warn">{t("content.unsavedBadge")}</Badge>}
           {draft && (
-            <button type="button" className="lbf-textbtn" onClick={() => p.onRevert(e, loc)}>
+            <button type="button" className="ux-link" onClick={() => p.onRevert(e, loc)}>
               {t("content.undo")}
-              <span className="sr-only">: {e.key}</span>
+              <span className="sr-only">: {p.label}</span>
             </button>
           )}
           {mod && (
-            <button type="button" className="lbf-textbtn" onClick={() => p.onReset(e, loc)} disabled={busy} aria-busy={busy}>
+            <button type="button" className="ux-link" onClick={() => p.onReset(e, loc)} disabled={busy} aria-busy={busy}>
               {busy ? t("content.resetting") : t("content.reset")}
-              <span className="sr-only">: {e.key}</span>
+              <span className="sr-only">: {p.label}</span>
             </button>
           )}
         </div>
@@ -504,9 +636,14 @@ const ContentRow = memo(function ContentRow(p: RowProps) {
   };
 
   return (
-    <article className="adm-crow" data-ckey={e.key} data-modified={modified ? "true" : "false"} data-unsaved={unsaved ? "true" : "false"}>
-      <p className="adm-ckey" dir="ltr">
-        {p.showNs ? e.key : e.path}
+    <article className="adm-crow" data-ckey={e.key} data-modified={modified ? "true" : "false"} data-unsaved={unsaved ? "true" : "false"} title={e.key}>
+      <p className="ux-crow-label" dir="auto">
+        {p.label}
+        {p.showKey && (
+          <span className="ux-crow-key" dir="ltr">
+            {e.key}
+          </span>
+        )}
       </p>
       <div className="adm-pair adm-cpair">
         {lane("en")}

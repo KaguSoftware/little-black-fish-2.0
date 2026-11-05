@@ -93,8 +93,8 @@ export interface Teller {
   framing?: Partial<Record<ChapterId, Framing>>;
   /** Optional per-chapter cast overrides; otherwise `defaultCast` places the others. */
   cast?: Partial<Record<ChapterId, CastSpot[]>>;
-  /** Backdrop plate per chapter (only world/day/did/others are shown). */
-  plates: Partial<Record<ChapterId, StillId>>;
+  /** Backdrop plate per chapter (only world/day/did/others are shown). A StillId, or an image URL once the roster applies an admin override. */
+  plates: Partial<Record<ChapterId, string>>;
   /** Portrait still + focal point for THE OTHERS / switcher chips (object-position %). */
   portrait: { still: StillId; focus: readonly [x: number, y: number] };
   /** Optional character GLB (from scripts/optimize-characters.mjs) that replaces the procedural puppet. */

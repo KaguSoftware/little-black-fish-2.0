@@ -1,3 +1,4 @@
+// RETIRED: the public site never renders hero_slides. Hero films are managed under Images (SiteImages). Kept for the table data only; do not mount.
 "use client";
 
 import { useMemo, useState } from "react";

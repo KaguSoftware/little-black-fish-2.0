@@ -9,7 +9,7 @@ export const ADMIN_CSS_NAV = `
 .adm-content{min-width:0}
 .adm-content .lbf-textbtn{display:inline-flex;align-items:center;min-height:2.75rem}
 .adm-content .adm-acts .lbf-textbtn,.adm-content .adm-sub-acts .lbf-textbtn{min-height:2.75rem}
-@media (pointer:coarse){.adm-icon{width:2.75rem;height:2.75rem}}
+@media (pointer:coarse),(max-width:56rem){.adm-icon{width:2.75rem;height:2.75rem}}
 .adm-panel:focus{outline:none}
 .adm-panel:focus-visible{outline:none}
 

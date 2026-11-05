@@ -21,6 +21,7 @@ export const NAMESPACES = [
   "contact",
   "login",
   "admin",
+  "adminMedia",
   "footer",
   "errors",
 ] as const;

@@ -4,7 +4,9 @@ import { useId, type PointerEvent } from "react";
 import { useTranslations } from "next-intl";
 import type { Oklch } from "@/shared/content/types";
 import { DEFAULT_FOCUS, CUSTOM_FOCUS } from "@/shared/content/roster";
-import { Upload } from "./Upload";
+import { ImageSlot } from "./ImageSlot";
+import { builtInOf } from "./images-model";
+import { PLATE_CHAPTERS } from "@/shared/data/settingsSchema";
 
 /** Editable look of one voice (site_settings "tellers"). null = built-in default. */
 export interface LookState {
@@ -12,6 +14,10 @@ export interface LookState {
   focus: [number, number] | null;
   accent: Oklch | null;
   stageHue: number | null;
+  /** Reel frame ("" = built-in). */
+  reel: string;
+  /** Backdrop per chapter ("" / missing = built-in). */
+  plates: Record<string, string>;
 }
 
 const css = `
@@ -20,7 +26,7 @@ const css = `
 @media (min-width:40rem){.vl-row{grid-template-columns:minmax(0,15rem) minmax(0,1fr)}}
 .vl-pick{position:relative;display:block;width:100%;max-width:12rem;aspect-ratio:3/4;overflow:hidden;cursor:crosshair;border:1px solid var(--hairline);background:var(--stage-deep,#000);touch-action:none}
 .vl-pick img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;user-select:none}
-.vl-dot{position:absolute;width:1.1rem;height:1.1rem;margin:-.55rem 0 0 -.55rem;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #000,0 0 0 3px rgba(0,0,0,.35);pointer-events:none}
+.vl-dot{position:absolute;width:1.75rem;height:1.75rem;margin:-.875rem 0 0 -.875rem;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 1px #000,0 0 0 3px rgba(0,0,0,.35);pointer-events:none}
 .vl-crops{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end}
 .vl-crop{display:grid;gap:.3rem;justify-items:center;font-size:var(--step--1);color:var(--ink-dim)}
 .vl-crop img{display:block;object-fit:cover;background:var(--stage-deep,#000)}
@@ -81,13 +87,16 @@ export function VoiceLookEditor({
   onChange,
   defaults,
   portraitDefault,
+  voiceId,
 }: {
   value: LookState;
   onChange: (next: LookState) => void;
   defaults: { accent: Oklch; stageHue: number };
   portraitDefault: string;
+  voiceId: string;
 }) {
   const t = useTranslations("admin");
+  const tm = useTranslations("adminMedia");
   const src = value.portrait || portraitDefault;
   const focus = value.focus ?? (value.portrait ? CUSTOM_FOCUS : DEFAULT_FOCUS);
   const pos = `${focus[0]}% ${focus[1]}%`;
@@ -116,15 +125,14 @@ export function VoiceLookEditor({
 
       <div className="vl-row">
         <div>
-          <Upload
-            bucket="projects"
-            imagesOnly
+          <ImageSlot
             label={t("series.look.portrait")}
-            hint={t("series.look.portraitHint")}
+            description={t("series.look.portraitHint")}
             value={value.portrait}
             onChange={(url) => set({ portrait: url.trim() })}
+            builtIn={portraitDefault}
+            aspect="3/4"
           />
-          {!value.portrait && <p className="adm-hint-line">{t("series.look.builtInPortrait")}</p>}
         </div>
         <div className="vl-ranges">
           <p className="adm-group-title">{t("series.look.focus")}</p>
@@ -163,6 +171,32 @@ export function VoiceLookEditor({
         </div>
       </div>
 
+      <div className="vi">
+        <div>
+          <p className="adm-group-title">{tm("images.voice.title")}</p>
+          <p className="adm-hint-line">{tm("images.voice.hint")}</p>
+        </div>
+        <div className="vi-grid">
+          <ImageSlot
+            label={tm("images.voice.reel")}
+            description={tm("images.reelHint")}
+            value={value.reel}
+            onChange={(url) => set({ reel: url })}
+            builtIn={builtInOf(`voice:${voiceId}:reel`)}
+          />
+          {PLATE_CHAPTERS.map((c) => (
+            <ImageSlot
+              key={c}
+              label={tm("images.voice.plate", { chapter: tm(`images.chapter.${c}`) })}
+              description={tm("images.plateHint")}
+              value={value.plates[c] ?? ""}
+              onChange={(url) => set({ plates: { ...value.plates, [c]: url } })}
+              builtIn={builtInOf(`voice:${voiceId}:plate:${c}`)}
+            />
+          ))}
+        </div>
+      </div>
+
       <div className="vl-ranges">
         <div className="vl-head">
           <span className="vl-swatch" role="img" aria-label={t("series.look.swatch")} style={{ background: oklch(acc) }} />
@@ -171,7 +205,7 @@ export function VoiceLookEditor({
             <p className="adm-hint-line">{t("series.look.accentHint")}</p>
           </div>
           <span className="vl-tag">{value.accent ? t("series.look.custom") : t("series.look.usingDefault")}</span>
-          <button type="button" className="lbf-textbtn" disabled={!value.accent} onClick={() => set({ accent: null })}>
+          <button type="button" className="adm-btn adm-btn-quiet" disabled={!value.accent} onClick={() => set({ accent: null })}>
             {t("series.look.reset")}
           </button>
         </div>
@@ -197,7 +231,7 @@ export function VoiceLookEditor({
             <p className="adm-hint-line">{t("series.look.stageHint")}</p>
           </div>
           <span className="vl-tag">{value.stageHue != null ? t("series.look.custom") : t("series.look.usingDefault")}</span>
-          <button type="button" className="lbf-textbtn" disabled={value.stageHue == null} onClick={() => set({ stageHue: null })}>
+          <button type="button" className="adm-btn adm-btn-quiet" disabled={value.stageHue == null} onClick={() => set({ stageHue: null })}>
             {t("series.look.reset")}
           </button>
         </div>

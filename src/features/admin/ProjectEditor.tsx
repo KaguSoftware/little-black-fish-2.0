@@ -2,14 +2,15 @@
 
 import { useId, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { formatNumber, pick } from "@/shared/data/localize";
+import { pick } from "@/shared/data/localize";
 import { getYouTubeId } from "@/shared/data/youtube";
 import type { CategoryRow, ProjectRow } from "@/shared/data/types";
 import type { ProjectInput } from "@/shared/actions/admin/types";
 import { createProject, updateProject } from "@/shared/actions/admin/projects";
 import { EditorShell, Field } from "./EditorShell";
-import { Upload } from "./Upload";
-import { EndIcon, StartIcon } from "./parts";
+import { Switch } from "./ux";
+import { ImageField } from "./ImageField";
+import { ImageListField } from "./ImageListField";
 
 const SUPPORT_TEXT = ["Title", "Intro", "Body", "Closing"] as const;
 type SupportKey = `support${(typeof SUPPORT_TEXT)[number]}${"En" | "Fa"}`;
@@ -97,16 +98,6 @@ function toInput(f: Form): ProjectInput {
   };
 }
 
-/** Keys that follow each image when it moves (url + occurrence, so duplicates stay unique). */
-function galleryKeys(urls: string[]): [string, string][] {
-  const seen = new Map<string, number>();
-  return urls.map((url) => {
-    const k = seen.get(url) ?? 0;
-    seen.set(url, k + 1);
-    return [url, `${url}#${k}`];
-  });
-}
-
 interface Props {
   row: ProjectRow | null;
   /** Current published state (after any optimistic toggle in the list). Update writes it. */
@@ -131,15 +122,6 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
     if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
   };
   const dirty = JSON.stringify(f) !== JSON.stringify(initial);
-
-  const moveImage = (i: number, d: -1 | 1) =>
-    setF((p) => {
-      const g = [...p.galleryUrls];
-      const j = i + d;
-      if (j < 0 || j >= g.length) return p;
-      [g[i], g[j]] = [g[j], g[i]];
-      return { ...p, galleryUrls: g };
-    });
 
   async function submit() {
     const e: Partial<Record<keyof Form, string>> = {};
@@ -181,13 +163,21 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
       dirty={dirty}
       onCancel={onClose}
       onSubmit={submit}
-      footStart={
-        <label className="lbf-check">
-          <input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} />
-          <span>{row ? t("projects.published") : t("projects.publishNow")}</span>
-        </label>
-      }
     >
+      <div className="adm-status" data-on={f.published ? "true" : "false"}>
+        <div className="adm-status-text">
+          <span className="lbf-label">{row ? t("projects.published") : t("projects.publishNow")}</span>
+          <span className="lbf-hint">{f.published ? t("projects.publishedHint") : t("projects.draftHint")}</span>
+        </div>
+        <Switch
+          on={f.published}
+          onChange={(v) => set("published", v)}
+          label={row ? t("projects.published") : t("projects.publishNow")}
+          onText={t("stateOn")}
+          offText={t("projects.off")}
+        />
+      </div>
+
       <div className="adm-pair">
         <Field label={t("titleEn")} required error={errors.titleEn}>
           {({ id, describedBy, invalid }) => (
@@ -219,54 +209,6 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
           )}
         </Field>
       </div>
-
-      <div className="adm-pair">
-        <Field label={t("descriptionEn")}>
-          {({ id }) => (
-            <textarea
-              id={id}
-              className="lbf-input"
-              dir="ltr"
-              rows={4}
-              value={f.descriptionEn}
-              onChange={(e) => set("descriptionEn", e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("descriptionFa")}>
-          {({ id }) => (
-            <textarea
-              id={id}
-              className="lbf-input"
-              dir="rtl"
-              lang="fa"
-              rows={4}
-              value={f.descriptionFa}
-              onChange={(e) => set("descriptionFa", e.target.value)}
-            />
-          )}
-        </Field>
-      </div>
-
-      <Field label={t("projects.category")} hint={categories.length === 0 ? t("projects.noCategories") : undefined}>
-        {({ id, describedBy }) => (
-          <select
-            id={id}
-            className="lbf-input"
-            value={f.categoryId}
-            onChange={(e) => set("categoryId", e.target.value)}
-            aria-describedby={describedBy}
-          >
-            <option value="">{t("projects.uncategorized")}</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {pick(c, "name", locale)}
-                {c.visible ? "" : ` (${t("categories.off")})`}
-              </option>
-            ))}
-          </select>
-        )}
-      </Field>
 
       <div className="adm-group">
         <fieldset className="adm-seg">
@@ -304,78 +246,79 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
           </Field>
         </div>
 
-        <Upload
-          bucket="projects"
+        <ImageField
           label={t("projects.cover")}
-          hint={f.mediaType === "youtube" ? t("projects.coverHintYouTube") : t("projects.coverHintGallery")}
+          description={f.mediaType === "youtube" ? t("projects.coverHintYouTube") : t("projects.coverHintGallery")}
           value={f.imageUrl}
           onChange={(url) => set("imageUrl", url)}
+          bucket="projects"
           imagesOnly
+          hints={{ recommended: { width: 1600, height: 900, ratio: "16:9" }, minWidth: 1000 }}
         />
 
         <div className="adm-collapse lbf-field" data-open={f.mediaType === "gallery" ? "true" : "false"}>
-          <span className="lbf-label" id="adm-gallery-label">
-            {t("projects.gallery")}
-            {f.galleryUrls.length > 0 && ` (${formatNumber(f.galleryUrls.length, locale)})`}
-          </span>
-          {f.galleryUrls.length === 0 ? (
-            <span className="lbf-hint">{t("projects.galleryEmpty")}</span>
-          ) : (
-            <ol className="adm-gallery" aria-labelledby="adm-gallery-label">
-              {galleryKeys(f.galleryUrls).map(([url, key], i) => {
-                const pos = formatNumber(i + 1, locale);
-                return (
-                  <li key={key} className="adm-gal-item">
-                    <div className="adm-gal-img">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={t("projects.galleryImage", { n: pos })} loading="lazy" />
-                      <span className="adm-gal-idx" aria-hidden="true">
-                        {pos}
-                      </span>
-                    </div>
-                    <div className="adm-gal-acts">
-                      <span className="adm-move">
-                        <button
-                          type="button"
-                          className="adm-icon"
-                          onClick={() => moveImage(i, -1)}
-                          disabled={i === 0}
-                          aria-label={t("projects.moveEarlier", { n: pos })}
-                        >
-                          <StartIcon />
-                        </button>
-                        <button
-                          type="button"
-                          className="adm-icon"
-                          onClick={() => moveImage(i, 1)}
-                          disabled={i === f.galleryUrls.length - 1}
-                          aria-label={t("projects.moveLater", { n: pos })}
-                        >
-                          <EndIcon />
-                        </button>
-                      </span>
-                      <button
-                        type="button"
-                        className="lbf-textbtn adm-danger"
-                        onClick={() => set("galleryUrls", f.galleryUrls.filter((_, j) => j !== i))}
-                      >
-                        {t("remove")}
-                        <span className="sr-only"> {t("projects.galleryImage", { n: pos })}</span>
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-          <Upload
+          <ImageListField
+            label={t("projects.gallery")}
+            description={f.galleryUrls.length ? t("projects.galleryOrder") : t("projects.galleryEmpty")}
+            value={f.galleryUrls}
+            onChange={(urls) => set("galleryUrls", urls)}
             bucket="projects"
-            mode="add"
-            label={t("projects.addImage")}
-            onChange={(url) => setF((p) => ({ ...p, galleryUrls: [...p.galleryUrls, url] }))}
-            imagesOnly
+            coverUrl={f.imageUrl || null}
+            onSetCover={(url) => set("imageUrl", url)}
           />
         </div>
+      </div>
+
+      <div className="adm-group">
+      <div className="adm-pair">
+        <Field label={t("descriptionEn")}>
+          {({ id }) => (
+            <textarea
+              id={id}
+              className="lbf-input"
+              dir="ltr"
+              rows={4}
+              value={f.descriptionEn}
+              onChange={(e) => set("descriptionEn", e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("descriptionFa")}>
+          {({ id }) => (
+            <textarea
+              id={id}
+              className="lbf-input"
+              dir="rtl"
+              lang="fa"
+              rows={4}
+              value={f.descriptionFa}
+              onChange={(e) => set("descriptionFa", e.target.value)}
+            />
+          )}
+        </Field>
+      </div>
+
+
+      <Field label={t("projects.category")} hint={categories.length === 0 ? t("projects.noCategories") : undefined}>
+        {({ id, describedBy }) => (
+          <select
+            id={id}
+            className="lbf-input"
+            value={f.categoryId}
+            onChange={(e) => set("categoryId", e.target.value)}
+            aria-describedby={describedBy}
+          >
+            <option value="">{t("projects.uncategorized")}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {pick(c, "name", locale)}
+                {c.visible ? "" : ` (${t("categories.off")})`}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+
       </div>
 
       <div className="adm-group">

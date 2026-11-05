@@ -1,5 +1,6 @@
 "use client";
 
+import { smallImage } from "@/shared/lib/imageUrl";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
@@ -85,7 +86,7 @@ export function CastList() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={t.portraitUrl}
+                      src={smallImage(t.portraitUrl, 384)}
                       alt=""
                       width={300}
                       height={400}

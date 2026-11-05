@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // 960/1280/1600 are the lantern-wall texture widths (see shared/lib/imageUrl.ts); 60 is its quality.
+    deviceSizes: [640, 750, 828, 960, 1080, 1200, 1280, 1600, 1920, 2048, 3840],
+    qualities: [60, 75],
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
       { protocol: "https", hostname: "img.youtube.com", pathname: "/vi/**" },

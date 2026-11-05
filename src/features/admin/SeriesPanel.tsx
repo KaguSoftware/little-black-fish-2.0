@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { pick } from "@/shared/data/localize";
 import { getPathname } from "@/i18n/navigation";
 import { TELLER_BY_ID } from "@/shared/content/characters";
@@ -20,6 +20,8 @@ import { EditorShell } from "./EditorShell";
 import { PanelFrame, TextField } from "./forms";
 import type { Notify } from "./parts";
 import { VoiceLookEditor, type LookState } from "./VoiceLook";
+import { storageUrls } from "./images-model";
+import { useOrphanOffer } from "./orphans";
 
 type WithId<T extends { slug: string }> = T & { id: string };
 const NARRATION_KEYS = ["hello", "world", "day", "did", "others"] as const;
@@ -60,7 +62,6 @@ export function SeriesPanel({
   const [part, setPart] = useState<"chapters" | "characters">("characters");
   const ch = useMemo(() => merge(CHAPTER_DEFAULTS, chapters), [chapters]);
   const cs = useMemo(() => merge(CHARACTER_DEFAULTS, characters), [characters]);
-  const unstored = (part === "chapters" ? ch : cs).storedSlugs.size < (part === "chapters" ? ch : cs).rows.length;
 
   return (
     <PanelFrame id="series" labelledBy={labelledBy} hidden={hidden} title={t("series.title")} sub={t("series.sub")}>
@@ -71,8 +72,7 @@ export function SeriesPanel({
           </button>
         ))}
       </div>
-      {unstored && <p className="adm-note">{t("series.unstoredNote")}</p>}
-      <p className="adm-note">{t(part === "chapters" ? "series.chaptersNote" : "series.charactersNote")}</p>
+      {part === "chapters" && <p className="adm-note">{t("series.chaptersNote")}</p>}
 
       <CollectionPanel
         table="series_chapters"
@@ -163,6 +163,8 @@ const lookToState = (l: TellerLook | undefined): LookState => ({
   focus: l?.focus ?? null,
   accent: l?.accent ?? null,
   stageHue: l?.stageHue ?? null,
+  reel: l?.reel ?? "",
+  plates: { ...(l?.plates ?? {}) } as Record<string, string>,
 });
 function stateToLook(s: LookState): TellerLook | null {
   const out: TellerLook = {};
@@ -170,6 +172,9 @@ function stateToLook(s: LookState): TellerLook | null {
   if (s.focus) out.focus = s.focus;
   if (s.accent) out.accent = [s.accent[0], s.accent[1], s.accent[2]];
   if (s.stageHue != null) out.stageHue = s.stageHue;
+  if (s.reel) out.reel = s.reel;
+  const plates = Object.fromEntries(Object.entries(s.plates).filter(([, v]) => v));
+  if (Object.keys(plates).length) out.plates = plates;
   return Object.keys(out).length ? out : null;
 }
 
@@ -248,6 +253,8 @@ function CharacterForm({
   onSaved: (m: string) => void;
 }) {
   const t = useTranslations("admin");
+  const locale = useLocale();
+  const offerCleanup = useOrphanOffer();
   const builtIn = useMemo(() => CHARACTER_DEFAULTS.find((c) => c.slug === row.slug), [row.slug]);
   const initial = useMemo(
     () => ({
@@ -310,7 +317,11 @@ function CharacterForm({
         narrationFa: clean(f.narrationFa),
         look: stateToLook(f.look),
       });
-      if (res.success) onSaved(t("series.characterSaved"));
+      if (res.success) {
+        // Pictures this save let go of: offer to delete the ones nothing uses any more.
+        void offerCleanup([...storageUrls(look ?? {})].filter((u) => !storageUrls(stateToLook(f.look) ?? {}).has(u)));
+        onSaved(t("series.characterSaved"));
+      }
       else setError(t("saveFailed", { error: res.error }));
     } catch {
       setError(t("saveFailed", { error: t("networkError") }));
@@ -323,7 +334,7 @@ function CharacterForm({
 
   return (
     <EditorShell
-      title={t("series.editCharacter", { slug: row.slug })}
+      title={t("series.editCharacter", { name: pick(row, "name", locale === "fa" ? "fa" : "en") || row.slug })}
       submitLabel={t("update")}
       saving={saving}
       error={error}
@@ -349,6 +360,7 @@ function CharacterForm({
             stageHue: TELLER_BY_ID[row.slug as TellerId].stageHue.default,
           }}
           portraitDefault={tellerPortrait(row.slug as TellerId)}
+          voiceId={row.slug}
         />
       </div>
 

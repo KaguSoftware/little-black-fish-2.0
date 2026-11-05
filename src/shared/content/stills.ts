@@ -1,3 +1,4 @@
+import { isImageRef, optimizedUrl } from "../lib/imageUrl";
 import type { StillId, TellerId } from "./types";
 
 /**
@@ -58,6 +59,9 @@ export const stillCard = (id: StillId, w: 640 | 1200 = 1200, fmt: "webp" | "avif
   `/stills/${id}-${w}.${fmt}`;
 
 export const stillPlate = (id: StillId) => `/plates/${id}.webp`;
+
+/** Backdrop texture URL for a plate reference: a built-in still id, or an admin-chosen image (optimised, 1600w). */
+export const plateSrc = (ref: string) => (isImageRef(ref) ? optimizedUrl(ref, 1600) : stillPlate(ref as StillId));
 
 /** Home hero wall textures: lighter cuts, since the halftone, fog and grain sit on top. */
 export const stillHero = (id: StillId, w: 960 | 1280) => `/hero/${id}-${w}.webp`;

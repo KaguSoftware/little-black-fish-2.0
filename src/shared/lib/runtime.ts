@@ -1,5 +1,5 @@
 import { Vector3 } from "three";
-import type { ChapterId, StillId, TellerId } from "../content/types";
+import type { ChapterId, TellerId } from "../content/types";
 import type { MoodParams } from "../content/moods";
 import { MOODS } from "../content/moods";
 import type { Lab, RGB } from "./color";
@@ -58,7 +58,7 @@ export interface FrameParams {
   textSide: -1 | 0 | 1;
 
   /** Backdrop plate crossfade: a -> b by mix; opacity is overall plate visibility. */
-  plate: { a: StillId | null; b: StillId | null; mix: number; opacity: number };
+  plate: { a: string | null; b: string | null; mix: number; opacity: number };
 
   /** Chapter-driven effect envelopes, all 0..1. */
   fx: {

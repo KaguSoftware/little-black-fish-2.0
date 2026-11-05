@@ -55,7 +55,7 @@ function WordLines({ name }: { name: string }) {
  * still scrolls.
  */
 export function Hero({ onCue }: { onCue: () => void }) {
-  const { heroVideos, studio } = useSiteData();
+  const { heroVideos, studio, wall } = useSiteData();
   const roster = useRoster();
   const heroRef = useRef<HTMLElement>(null);
   const handRef = useRef<HTMLDivElement>(null);
@@ -249,7 +249,7 @@ export function Hero({ onCue }: { onCue: () => void }) {
       onPointerCancel={onPointerUp}
     >
       <motion.div className={s.heroCanvas} style={{ opacity: canvasOpacity }} aria-hidden>
-        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} videos={heroVideos.map((v) => v.src)} roster={roster} />
+        <LanternScene active={inView} highTier={quality === "high"} motionOn={motionOn} videos={heroVideos} wall={wall} roster={roster} />
       </motion.div>
 
       <motion.div className={s.heroContent} style={{ opacity: contentOpacity, y: contentShift }}>

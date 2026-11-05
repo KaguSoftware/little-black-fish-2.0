@@ -8,25 +8,26 @@ import { countWord } from "@/shared/content/roster";
 import type { TellerId } from "@/shared/content/types";
 import { STILL_BY_ID, stillCard } from "@/shared/content/stills";
 import type { StillId } from "@/shared/content/types";
+import { REEL_STILL } from "@/shared/content/wall";
+import { smallImage } from "@/shared/lib/imageUrl";
+import { cardImage } from "@/shared/data/cards";
 import { oklchCss } from "@/shared/lib/color";
 import { clamp, damp, hash1, smoothstep, smootherstep } from "@/shared/lib/math";
 import { useUI } from "@/shared/state/store";
 import { tellerName } from "@/features/series/ui/lib/i18n";
 import s from "./home.module.css";
 
-/** One frame per teller voice (the still that opens that voice). */
-const REEL_STILL: Record<TellerId, StillId> = {
-  child: "s09",
-  elder: "s08",
-  "snake-king": "s04",
-  "silver-one": "s15",
-  "masked-lady": "s12",
-  creature: "s23",
-};
+/** One reel frame: the voice's built-in still, or the picture the admin chose for it. */
+export interface ReelFrame {
+  id: TellerId;
+  still: StillId;
+  /** Admin-chosen image URL; null = the built-in still. */
+  src: string | null;
+}
 /** The reel frames for the visible voices, in admin order: one per voice. */
-export function useReelFrames(): StillId[] {
+export function useReelFrames(): ReelFrame[] {
   const roster = useRoster();
-  return useMemo(() => roster.map((t) => REEL_STILL[t.id]), [roster]);
+  return useMemo(() => roster.map((t) => ({ id: t.id, still: REEL_STILL[t.id], src: t.reel })), [roster]);
 }
 /** Scroll distance per frame, in viewport heights. */
 export const REEL_VH_PER_FRAME = 0.55;
@@ -197,10 +198,11 @@ export function ReelStrip() {
         <div className={s.reelWindow}>
           <div ref={weaveRef} className={s.reelWeave}>
             <div ref={trackRef} className={s.reelTrack}>
-              {REEL_FRAMES.map((id, i) => {
+              {REEL_FRAMES.map((frame, i) => {
+                const id = frame.still;
                 const st = STILL_BY_ID[id];
                 return (
-                  <div key={id} className={s.reelCell}>
+                  <div key={frame.id} className={s.reelCell}>
                     <div className={s.reelNo} aria-hidden>
                       {String(i + 1).padStart(2, "0")}
                     </div>
@@ -209,22 +211,33 @@ export function ReelStrip() {
                       ref={(el) => void (frameRefs.current[i] = el)}
                       style={{ opacity: i === 0 ? 1 : 0.16 }}
                     >
-                      <picture>
-                        <source
-                          type="image/avif"
-                          srcSet={`${stillCard(id, 640, "avif")} 640w, ${stillCard(id, 1200, "avif")} 1200w`}
-                          sizes="(max-width: 800px) 82vw, 56vw"
-                        />
+                      {frame.src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={stillCard(id, 1200, "webp")}
-                          srcSet={`${stillCard(id, 640, "webp")} 640w, ${stillCard(id, 1200, "webp")} 1200w`}
-                          sizes="(max-width: 800px) 82vw, 56vw"
-                          alt={st.alt}
+                          {...cardImage(frame.src, "(max-width: 800px) 82vw, 56vw")}
+                          alt="" /* a custom frame has no description of its own; the built-in still's alt would be wrong */
                           loading={i < 3 ? "eager" : "lazy"}
                           decoding="async"
                           draggable={false}
                         />
-                      </picture>
+                      ) : (
+                        <picture>
+                          <source
+                            type="image/avif"
+                            srcSet={`${stillCard(id, 640, "avif")} 640w, ${stillCard(id, 1200, "avif")} 1200w`}
+                            sizes="(max-width: 800px) 82vw, 56vw"
+                          />
+                          <img
+                            src={stillCard(id, 1200, "webp")}
+                            srcSet={`${stillCard(id, 640, "webp")} 640w, ${stillCard(id, 1200, "webp")} 1200w`}
+                            sizes="(max-width: 800px) 82vw, 56vw"
+                            alt={st.alt}
+                            loading={i < 3 ? "eager" : "lazy"}
+                            decoding="async"
+                            draggable={false}
+                          />
+                        </picture>
+                      )}
                     </div>
                     <div className={s.reelNo} aria-hidden>
                       {String(i + 1).padStart(2, "0")}
@@ -242,9 +255,9 @@ export function ReelStrip() {
         <div className={s.reelProgress} aria-hidden>
           <div className={s.reelProgressTrack}>
             <motion.div className={s.reelProgressFill} style={{ scaleX: scrollYProgress }} />
-            {REEL_FRAMES.map((id, i) => (
+            {REEL_FRAMES.map((frame, i) => (
               <span
-                key={id}
+                key={frame.id}
                 className={s.reelProgressTick}
                 data-passed={i <= index || undefined}
                 style={{ left: `${(i / LAST) * 100}%` }}
@@ -266,7 +279,7 @@ export function ReelStrip() {
               <span className={s.reelFace}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={teller.portraitUrl}
+                  src={smallImage(teller.portraitUrl, 96)}
                   alt=""
                   width={40}
                   height={53}

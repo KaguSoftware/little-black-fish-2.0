@@ -21,7 +21,10 @@ export function MotionToggle() {
   const t = useTranslations("common");
   // The series page owns the bottom start corner (teller switcher), so the toggle moves to the end there.
   // Logical sides, so both mirror together in RTL.
-  const side = usePathname()?.startsWith("/projects/series") ? "end" : "start";
+  const path = usePathname() ?? "";
+  const side = path.startsWith("/projects/series") ? "end" : "start";
+  // The admin has no animated scene and handles prefers-reduced-motion itself; the fixed button only covers its content.
+  if (path.startsWith("/admin")) return null;
   return (
     <>
       <style>{CSS}</style>

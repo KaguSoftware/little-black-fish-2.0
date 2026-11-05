@@ -29,7 +29,10 @@ import { useUI } from "@/shared/state/store";
 import { AdaptiveDpr } from "@/shared/lib/AdaptiveDpr";
 import { oklchToLinear } from "@/shared/lib/color";
 import { clamp, easeOutQuint, hash1 } from "@/shared/lib/math";
+import { optimizedUrl } from "@/shared/lib/imageUrl";
+import type { HeroVideo, WallImage } from "@/shared/data/settingsSchema";
 import { lantern } from "./lantern";
+import { CENTRED, FRAMING, WALL_ORDER, type Framing } from "@/shared/content/wall";
 
 /**
  * The lantern wall. A drifting field of tall stills in fog. Every plate is rendered as
@@ -42,44 +45,8 @@ const FOV = 38;
 const PLATE_ASPECT = 0.62; // width / height of every tall plate
 const DEPTHS = [4.4, 5.8, 7.3, 9, 10.8, 12.8];
 
-/** Ordered for variety (neighbouring plates are different tellers) and for first impressions. */
-const WALL_ORDER: StillId[] = [
-  "s09", "s04", "s16", "s12", "s08", "s02", "s15", "s13", "s25",
-  "s18", "s06", "s19", "s27", "s01", "s17", "s24", "s07", "s21",
-];
-
-/**
- * Where the character stands in each wide still, so the tall crop holds the figure and not
- * the landscape around it. x, y: centre of the figure (fractions of width/height from the
- * top-left). zoom > 1 tightens the crop on figures that sit small in the frame. The crop
- * pans only a little around x.
- */
-interface Framing {
-  x: number;
-  y?: number;
-  zoom?: number;
-}
-const FRAMING: Partial<Record<StillId, Framing>> = {
-  s01: { x: 0.52 },
-  s02: { x: 0.5 },
-  s04: { x: 0.78 },
-  s06: { x: 0.62 },
-  s07: { x: 0.5, y: 0.68, zoom: 1.4 },
-  s08: { x: 0.69 },
-  s09: { x: 0.5 },
-  s12: { x: 0.5 },
-  s13: { x: 0.5 },
-  s15: { x: 0.45 },
-  s16: { x: 0.71 },
-  s17: { x: 0.48 },
-  s18: { x: 0.53 },
-  s19: { x: 0.52 },
-  s21: { x: 0.5, y: 0.66, zoom: 1.35 },
-  s24: { x: 0.5 },
-  s25: { x: 0.55 },
-};
-/** Films (and any still without an entry) keep the centred crop. */
-const CENTRED: Framing = { x: 0.5 };
+/** Last-resort texture when an admin picture cannot be loaded at all. */
+const FALLBACK_STILL: StillId = "s09";
 /** Pan amplitude around the focal point, as a fraction of the image width. */
 const PAN = 0.035;
 
@@ -90,12 +57,13 @@ const PAN = 0.035;
  */
 const VIDEO_SLOT_INDEX = [7, 9] as const;
 /** The hero films (settings.heroVideos, in order) mapped onto their wall slots. */
-function videoSlots(videos: readonly string[], order: readonly StillId[]): Record<number, string> {
-  const out: Record<number, string> = {};
+type Film = Pick<HeroVideo, "src" | "poster">;
+function videoSlots(videos: readonly Film[], order: readonly WallItem[]): Record<number, Film> {
+  const out: Record<number, Film> = {};
   VIDEO_SLOT_INDEX.forEach((slot, k) => {
     if (!videos[k] || order.length === 0) return;
-    // Keep the film on its own still; if that voice is switched off, on the nearest plate still free.
-    let at = order.indexOf(WALL_ORDER[slot]);
+    // Keep the film on its own still; if that voice is switched off (or the wall is custom), on the nearest plate still free.
+    let at = order.findIndex((w) => w.still === WALL_ORDER[slot]);
     if (at < 0) at = Math.min(slot, order.length - 1);
     while (out[at] && at > 0) at--;
     if (!out[at]) out[at] = videos[k];
@@ -103,10 +71,36 @@ function videoSlots(videos: readonly string[], order: readonly StillId[]): Recor
   return out;
 }
 
-/** The wall without the stills of voices switched off in /admin (a still stays if any of its voices is on). */
-function wallOrder(roster: readonly RosterTeller[]): StillId[] {
+/** One picture on the wall: a built-in still (texture chain /plates, /hero, /stills) or an admin-chosen image. */
+interface WallItem {
+  /** Built-in still this plate is, or null for a custom image. */
+  still: StillId | null;
+  /** Custom image URL (still === null). */
+  src?: string;
+  framing: Framing;
+}
+const BUILTIN_PLATE = /^\/plates\/(s\d\d)\.webp$/;
+const builtinFraming = (id: StillId): Framing => FRAMING[id] ?? CENTRED;
+
+/**
+ * The wall. No custom list: the built-in stills, minus those of voices switched off in /admin (a
+ * still stays if any of its voices is on). Custom list (settings.wall): exactly those pictures; a
+ * built-in plate keeps its own texture chain and framing unless the admin set a focus point.
+ */
+function wallItems(roster: readonly RosterTeller[], wall: readonly WallImage[]): WallItem[] {
+  if (wall.length) {
+    return wall.map((w): WallItem => {
+      const m = BUILTIN_PLATE.exec(w.src);
+      const id = m && STILL_BY_ID[m[1]] ? (m[1] as StillId) : null;
+      const base = id ? builtinFraming(id) : CENTRED;
+      const framing: Framing = w.focus
+        ? { x: w.focus[0] / 100, y: w.focus[1] / 100, zoom: w.zoom }
+        : { ...base, ...(w.zoom ? { zoom: w.zoom } : {}) };
+      return id ? { still: id, framing } : { still: null, src: w.src, framing };
+    });
+  }
   const on = new Set<string>(roster.map((t) => t.id));
-  return WALL_ORDER.filter((id) => STILL_BY_ID[id].tellers.some((t) => on.has(t)));
+  return WALL_ORDER.filter((id) => STILL_BY_ID[id].tellers.some((t) => on.has(t))).map((id) => ({ still: id, framing: builtinFraming(id) }));
 }
 
 /** A plate's footprint in hero CSS px, written each frame so the wall can tell which one the light is on. */
@@ -294,7 +288,11 @@ const HAZE_FRAG = /* glsl */ `
 `;
 
 interface PlateSpec {
-  id: StillId;
+  /** Unique per wall position. */
+  key: string;
+  item: WallItem;
+  /** A still to put on the plate before/instead of the film (hero poster). */
+  poster?: string;
   lane: number;
   depth: number;
   u0: number; // screen-fraction x
@@ -313,18 +311,20 @@ const WRAP = 1.9;
 /** How much a focused plate grows as it comes forward. */
 const LIFT = 0.06;
 
-function buildSpecs(count: number, highTier: boolean, videos: Record<number, string>, order: readonly StillId[], roster: readonly RosterTeller[]): PlateSpec[] {
+function buildSpecs(count: number, highTier: boolean, videos: Record<number, Film>, order: readonly WallItem[], roster: readonly RosterTeller[]): PlateSpec[] {
   const ids = order.slice(0, count);
   const lanes = DEPTHS.length;
-  return ids.map((id, i) => {
+  return ids.map((item, i) => {
     const lane = i % lanes;
     const inLane = Math.floor(i / lanes);
     const laneCount = Math.ceil((ids.length - lane) / lanes);
     const depth = DEPTHS[lane] + hash1(i * 3.1) * 0.5;
     const u0 = ((inLane + ((lane * 0.381966) % 1)) / laneCount) * WRAP - WRAP / 2;
-    const still = STILL_BY_ID[id];
+    const still = item.still ? STILL_BY_ID[item.still] : null;
     return {
-      id,
+      key: `${i}:${item.still ?? item.src}`,
+      item,
+      poster: videos[i]?.poster,
       lane,
       depth,
       u0,
@@ -332,9 +332,9 @@ function buildSpecs(count: number, highTier: boolean, videos: Record<number, str
       hFrac: 0.62 + (hash1(i * 5.3) * 0.5 + 0.5) * 0.4,
       speed: -0.03 * (DEPTHS[0] / depth) * (0.85 + (hash1(i * 2.2) * 0.5 + 0.5) * 0.3),
       seed: i * 1.618,
-      teller: oklchToLinear((roster.find((t) => still.tellers.includes(t.id)) ?? roster[0]).accent),
+      teller: oklchToLinear(((still ? roster.find((t) => still.tellers.includes(t.id)) : roster[i % roster.length]) ?? roster[0]).accent),
       large: highTier && lane < 2,
-      video: highTier ? videos[i] : undefined,
+      video: highTier ? videos[i]?.src : undefined,
     };
   });
 }
@@ -469,8 +469,13 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
   useEffect(() => {
     let cancelled = false;
     const loader = new TextureLoader();
-    const first = spec.large ? stillPlate(spec.id) : stillHero(spec.id, highTier ? 1280 : 960);
-    const urls = [first, stillCard(spec.id, 1200, "webp")];
+    const w = spec.large ? 1600 : highTier ? 1280 : 960;
+    const { still: sid, src } = spec.item;
+    const builtin = sid ? [spec.large ? stillPlate(sid) : stillHero(sid, highTier ? 1280 : 960), stillCard(sid, 1200, "webp")] : [];
+    // Admin pictures go through the image optimiser (no variants to generate); the raw file and a built-in still are the fallbacks.
+    const custom = src ? [optimizedUrl(src, w, 60), src, stillCard(FALLBACK_STILL, 1200, "webp")] : [];
+    const poster = spec.poster ? [optimizedUrl(spec.poster, w, 60), spec.poster] : [];
+    const urls = [...poster, ...(src ? custom : builtin)];
     const timer = window.setTimeout(() => {
       const tryLoad = (n: number) => {
         loader.load(
@@ -487,7 +492,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
             still.current = { tex, aspect: img.width / img.height };
             if (!video.current?.shown) {
               aspectRef.current = still.current.aspect;
-              fitCrop(material, aspectRef.current, FRAMING[spec.id]);
+              fitCrop(material, aspectRef.current, spec.item.framing);
               material.uniforms.uTex.value = tex;
             }
             reveal.current.target = 1;
@@ -517,7 +522,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
       v.shown = false;
       if (still.current.tex) {
         aspectRef.current = still.current.aspect;
-        fitCrop(material, aspectRef.current, FRAMING[spec.id]);
+        fitCrop(material, aspectRef.current, spec.item.framing);
         material.uniforms.uTex.value = still.current.tex;
       } else {
         material.uniforms.uTex.value = null;
@@ -619,7 +624,7 @@ function Plate({ spec, order, shared, focus, highTier, active, motionOn, videoDe
     else lift.current += (want - lift.current) * (1 - Math.exp(-(want > lift.current ? 7 : 3.5) * dt));
     if (mesh) {
       mesh.renderOrder = want ? 3 : lift.current > 0.02 ? 2 : 0;
-      stepPlate(mesh, material, spec, shared, reveal.current, aspectRef.current, state.camera as PerspectiveCamera, state.size, state.viewport.dpr, dt, lift.current, focus.rects[order], video.current?.shown ? CENTRED : (FRAMING[spec.id] ?? CENTRED));
+      stepPlate(mesh, material, spec, shared, reveal.current, aspectRef.current, state.camera as PerspectiveCamera, state.size, state.viewport.dpr, dt, lift.current, focus.rects[order], video.current?.shown ? CENTRED : spec.item.framing);
     }
     const v = video.current;
     if (v?.el) syncVideo(v, activeRef.current && motionOn.current);
@@ -804,12 +809,12 @@ function pickFocus(f: Focus) {
   f.target = best;
 }
 
-function Wall({ highTier, motionOn, active, videos, roster }: { highTier: boolean; motionOn: { current: boolean }; active: boolean; videos: readonly string[]; roster: readonly RosterTeller[] }) {
+function Wall({ highTier, motionOn, active, videos, roster, wall }: { highTier: boolean; motionOn: { current: boolean }; active: boolean; videos: readonly Film[]; roster: readonly RosterTeller[]; wall: readonly WallImage[] }) {
   const count = highTier ? 12 : 7;
   // Films start fetching only once every still has been requested (the stagger above).
   const videoDelay = 120 + count * (highTier ? 260 : 340) + 600;
-  const videoKey = videos.join("|");
-  const order = useMemo(() => wallOrder(roster), [roster]);
+  const videoKey = videos.map((v) => `${v.src}|${v.poster ?? ""}`).join(",");
+  const order = useMemo(() => wallItems(roster, wall), [roster, wall]);
   const specs = useMemo(
     () => (roster.length ? buildSpecs(count, highTier, videoSlots(videos, order), order, roster) : []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -840,7 +845,7 @@ function Wall({ highTier, motionOn, active, videos, roster }: { highTier: boolea
     <>
       {specs.map((s, i) => (
         <Plate
-          key={s.id}
+          key={s.key}
           spec={s}
           order={i}
           shared={shared}
@@ -861,15 +866,18 @@ export interface LanternSceneProps {
   /** Render loop on/off (off when scrolled away). */
   active: boolean;
   highTier: boolean;
-  /** Hero film sources, in order (settings.heroVideos). */
-  videos: readonly string[];
+  /** Hero films, in order (settings.heroVideos). */
+  videos: readonly Film[];
+  /** Custom wall pictures (settings.wall); [] = the built-in stills. */
+  wall?: readonly WallImage[];
   /** Ambient camera sway allowed (false under reduced motion). */
   motionOn: { current: boolean };
   /** Visible voices (admin): decides which stills hang on the wall and their tints. */
   roster: readonly RosterTeller[];
 }
 
-export default function LanternScene({ active, highTier, motionOn, videos, roster }: LanternSceneProps) {
+const NO_WALL: readonly WallImage[] = [];
+export default function LanternScene({ active, highTier, motionOn, videos, roster, wall = NO_WALL }: LanternSceneProps) {
   return (
     <Canvas
       flat
@@ -883,7 +891,7 @@ export default function LanternScene({ active, highTier, motionOn, videos, roste
     >
       {/* The halftone grid is laid out in drawing-buffer px, so a lower ratio only softens the dots. */}
       <AdaptiveDpr min={1} max={highTier ? 2 : 1.5} />
-      <Wall highTier={highTier} motionOn={motionOn} active={active} videos={videos} roster={roster} />
+      <Wall highTier={highTier} motionOn={motionOn} active={active} videos={videos} roster={roster} wall={wall} />
     </Canvas>
   );
 }

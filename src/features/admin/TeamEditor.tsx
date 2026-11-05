@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { pick } from "@/shared/data/localize";
 import type { TeamMemberRow } from "@/shared/data/types";
@@ -10,7 +10,9 @@ import { CollectionPanel } from "./CollectionPanel";
 import { EditorShell } from "./EditorShell";
 import { TextField } from "./forms";
 import { resolveThumb, type Notify } from "./parts";
-import { Upload } from "./Upload";
+import { ImageField } from "./ImageField";
+import { getAdminSetting, saveSettings } from "@/shared/actions/admin/settings";
+
 
 interface Form {
   nameEn: string;
@@ -57,7 +59,7 @@ export function TeamEditor({
         off: t("team.off"),
         turnOn: t("team.turnOn"),
         turnOff: t("team.turnOff"),
-        confirmDelete: (m) => t("team.confirmDelete", { name: pick(m, "name", locale) }),
+        confirmDelete: () => null,
       }}
       isActive={(m) => m.visible}
       view={(m) => ({
@@ -83,6 +85,23 @@ function TeamForm({
   onSaved: (message: string) => void;
 }) {
   const t = useTranslations("admin");
+  const [focus, setFocus] = useState<[number, number] | null>(null);
+  const [startFocus, setStartFocus] = useState<[number, number] | null>(null);
+  useEffect(() => {
+    if (!row) return;
+    let live = true;
+    void getAdminSetting("teamFocus")
+      .then((r) => {
+        if (!live || !r.success || !r.data) return;
+        const f = r.data[row.id] ?? null;
+        setFocus(f);
+        setStartFocus(f);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [row]);
   const initial = useMemo<Form>(
     () => ({
       nameEn: row?.name_en ?? "",
@@ -128,7 +147,20 @@ function TeamForm({
     setError(null);
     try {
       const res = row ? await updateTeamMember(row.id, input) : await createTeamMember(input);
-      if (res.success) onSaved(row ? t("team.saved") : t("team.created"));
+      if (res.success) {
+        const id = row ? row.id : (res.data as { id: string } | undefined)?.id;
+        if (id && JSON.stringify(focus) !== JSON.stringify(startFocus)) {
+          // The focus map is shared by all members: read it fresh, change one entry.
+          const cur = await getAdminSetting("teamFocus");
+          if (cur.success && cur.data) {
+            const next = { ...cur.data };
+            if (focus) next[id] = focus;
+            else delete next[id];
+            await saveSettings("teamFocus", next);
+          }
+        }
+        onSaved(row ? t("team.saved") : t("team.created"));
+      }
       else setError(t("saveFailed", { error: res.error }));
     } catch {
       setError(t("saveFailed", { error: t("networkError") }));
@@ -143,11 +175,22 @@ function TeamForm({
       submitLabel={row ? t("update") : t("team.create")}
       saving={saving}
       error={error}
-      dirty={JSON.stringify(f) !== JSON.stringify(initial)}
+      dirty={JSON.stringify(f) !== JSON.stringify(initial) || JSON.stringify(focus) !== JSON.stringify(startFocus)}
       onCancel={onClose}
       onSubmit={submit}
     >
-      <Upload bucket="projects" imagesOnly label={t("team.photo")} hint={t("team.photoHint")} value={f.photoUrl} onChange={set("photoUrl")} />
+      <ImageField
+        label={t("team.photo")}
+        description={t("team.photoHint")}
+        value={f.photoUrl}
+        onChange={set("photoUrl")}
+        bucket="projects"
+        imagesOnly
+        aspect="3/4"
+        focus={focus}
+        onFocusChange={setFocus}
+        hints={{ recommended: { width: 900, height: 1200, ratio: "3:4" }, minWidth: 600 }}
+      />
       <div className="adm-pair">
         <TextField label={t("team.nameEn")} required dir="ltr" value={f.nameEn} onChange={set("nameEn")} error={errors.nameEn} />
         <TextField label={t("team.nameFa")} required dir="rtl" value={f.nameFa} onChange={set("nameFa")} error={errors.nameFa} />

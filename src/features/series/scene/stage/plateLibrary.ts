@@ -6,7 +6,9 @@ import {
   type WebGLRenderer,
 } from "three";
 import { TELLERS } from "@/shared/content/characters";
-import { stillPlate } from "@/shared/content/stills";
+import { tellerView } from "@/shared/content/roster";
+import { plateSrc, stillPlate } from "@/shared/content/stills";
+import { isImageRef } from "@/shared/lib/imageUrl";
 import type { TellerId } from "@/shared/content/types";
 
 const ANISOTROPY = 4;
@@ -26,13 +28,36 @@ export class PlateLibrary {
   private loaded = new Map<string, PlateEntry>();
   private pending = new Set<string>();
   private failed = new Set<string>();
+  /** Built-in plate to show instead of a custom one that failed to load. */
+  private fallbacks = new Map<string, string | null>();
   private dead = false;
 
   constructor(private gl: WebGLRenderer | null) {}
 
   /** Loaded entry or undefined (no allocation). */
   get(url: string): PlateEntry | undefined {
-    return this.loaded.get(url);
+    const e = this.loaded.get(url);
+    if (e || !this.failed.has(url)) return e;
+    const fb = this.fallbackFor(url);
+    if (!fb) return undefined;
+    this.request(fb);
+    return this.loaded.get(fb);
+  }
+
+  /** The teller's own built-in still for a custom plate that cannot be loaded (broken or unreachable link). */
+  private fallbackFor(url: string): string | null {
+    const known = this.fallbacks.get(url);
+    if (known !== undefined) return known;
+    let found: string | null = null;
+    for (const t of TELLERS) {
+      for (const [chapter, ref] of Object.entries(tellerView(t.id).plates)) {
+        if (!ref || !isImageRef(ref) || plateSrc(ref) !== url) continue;
+        const base = (t.plates as Record<string, string | undefined>)[chapter];
+        if (base) found = stillPlate(base as Parameters<typeof stillPlate>[0]);
+      }
+    }
+    this.fallbacks.set(url, found);
+    return found;
   }
 
   request(url: string) {
@@ -73,7 +98,7 @@ export class PlateLibrary {
   requestForTellers(requested: Partial<Record<TellerId, true>>) {
     for (const t of TELLERS) {
       if (!requested[t.id]) continue;
-      for (const id of Object.values(t.plates)) if (id) this.request(stillPlate(id));
+      for (const ref of Object.values(tellerView(t.id).plates)) if (ref) this.request(plateSrc(ref));
     }
   }
 

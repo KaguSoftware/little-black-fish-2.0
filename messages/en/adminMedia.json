@@ -1,0 +1,373 @@
+{
+  "cancel": "Cancel",
+  "close": "Close",
+  "retry": "Try again",
+  "networkError": "Couldn’t reach the server.",
+  "newTab": "opens in a new tab",
+  "kindVideo": "Video",
+  "buckets": {
+    "projects": "Pictures",
+    "hero": "Home films"
+  },
+  "toast": {
+    "undo": "Undo",
+    "dismiss": "Dismiss",
+    "region": "Notifications"
+  },
+  "drop": {
+    "one": "Drop a photo here",
+    "many": "Drop photos here",
+    "or": "or",
+    "release": "Drop to add",
+    "replace": "Drop to replace"
+  },
+  "upload": {
+    "choose": "Choose a file",
+    "chooseMany": "Choose files",
+    "dropOne": "You can also drop a file or paste an image.",
+    "dropMany": "You can also drop files or paste images.",
+    "paste": "You can also paste an image (Ctrl+V).",
+    "queue": "Uploads",
+    "queued": "Waiting",
+    "compressing": "Optimizing…",
+    "uploading": "Uploading {percent, number}%",
+    "done": "Uploaded",
+    "canceled": "Canceled",
+    "cancel": "Cancel",
+    "retry": "Try again",
+    "dismiss": "Remove from list",
+    "clearDone": "Clear finished",
+    "wrongType": "This file type isn’t supported. Use PNG, JPG, WebP, MP4 or WebM.",
+    "wrongTypeImage": "Use a PNG, JPG or WebP image.",
+    "tooBig": "This file is over 100 MB.",
+    "errNetwork": "The connection dropped. Check your internet and try again.",
+    "errAuth": "You’re not allowed to upload. Sign in again and retry.",
+    "errSize": "This file is too large for the server.",
+    "errGeneric": "Upload failed: {error}",
+    "errUnknown": "Upload failed. Try again."
+  },
+  "hint": {
+    "recommended": "Best at {width}×{height}{ratio} or larger.",
+    "minWidth": "At least {min}px wide works best.",
+    "tooSmall": "This picture is {width}×{height}, smaller than the {min}px width that looks sharp here. It will still upload.",
+    "ratioOff": "The shape differs from the recommended {ratio}, so it will be cropped.",
+    "tooSmallShort": "smaller than the {min}px that looks sharp"
+  },
+  "link": {
+    "label": "Link to an image",
+    "placeholder": "Paste an image link, https://…",
+    "hint": "The image stays where it is. We only store the link.",
+    "invalid": "Enter a full link that starts with http:// or https://.",
+    "add": "Add link",
+    "use": "Use this link",
+    "cantPreview": "We can’t preview this link, but you can still use it."
+  },
+  "picker": {
+    "titleOne": "Choose a photo",
+    "titleMany": "Choose photos",
+    "tabs": "Where to get photos",
+    "tabLibrary": "Library",
+    "tabUpload": "Upload",
+    "tabUploadBusy": "Upload ({count, number})",
+    "tabLink": "From link",
+    "nothingSelected": "Nothing selected yet",
+    "selectedOne": "1 photo selected",
+    "selectedCount": "{count, number} selected",
+    "clear": "Clear",
+    "useOne": "Use photo",
+    "useMany": "{count, plural, =0 {Add photos} one {Add # photo} other {Add # photos}}",
+    "goUpload": "Upload a photo"
+  },
+  "library": {
+    "search": "Search by name",
+    "filter": "Show",
+    "all": "All",
+    "unused": "Unused",
+    "filters": {
+      "all": "All",
+      "unused": "Unused",
+      "used": "In use",
+      "videos": "Videos"
+    },
+    "files": "Files",
+    "emptyTitle": "No files yet",
+    "emptyText": "Upload a photo and it will appear here.",
+    "noMatchTitle": "Nothing matches",
+    "noMatchText": "Try another name or filter.",
+    "errorTitle": "Couldn’t load the files",
+    "loadFailed": "Couldn’t load the files. Try again.",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "unusedBadge": "Not used anywhere",
+    "usedIn": "Used in",
+    "usedInN": "Used in {count, number} places"
+  },
+  "field": {
+    "add": "Add photo",
+    "addSub": "Drop a file here or click to choose",
+    "added": "Photo added.",
+    "remove": "Remove",
+    "removed": "{label} removed.",
+    "restored": "{label} restored.",
+    "replace": "Replace photo",
+    "details": "Details",
+    "size": "{width}×{height}px",
+    "broken": "This image can’t be loaded.",
+    "pickTitle": "Choose a photo for {label}",
+    "replaceTitle": "Replace {label}",
+    "useBuiltIn": "Use built-in",
+    "backToBuiltIn": "{label}: back to the built-in picture."
+  },
+  "detail": {
+    "alt": "Alt text",
+    "altHint": "Describe the picture for people who can’t see it.",
+    "focus": "Focus point",
+    "focusDot": "Focus point, {x}% across, {y}% down. Use the arrow keys to move it.",
+    "focusHint": "Click the part of the picture that must stay in view.",
+    "focusReset": "Reset to center",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "copyFailed": "Couldn’t copy the link.",
+    "open": "Open image",
+    "usedNone": "Not used anywhere that is saved yet.",
+    "usedIn": "{count, plural, one {Used in # place:} other {Used in # places:}}"
+  },
+  "list": {
+    "add": "Add images",
+    "count": "{count, plural, =0 {No images} one {# image} other {# images}}",
+    "countOf": "{count, number} of {max, number} images",
+    "emptyTitle": "Add images",
+    "emptySub": "Drop files here or click to choose. You can add several at once.",
+    "help": "Click a picture to replace it. Drag to reorder, or press Move first. With a keyboard: focus a picture, press Space, use the arrow keys, then Space to drop.",
+    "cover": "Cover",
+    "setCover": "Set as cover",
+    "moveFirst": "Move first",
+    "remove": "Remove image {position}",
+    "removed": "Image removed. {count, number} left.",
+    "removedToast": "Image removed",
+    "restored": "Image restored.",
+    "added": "{count, plural, one {# image added.} other {# images added.}}",
+    "maxReached": "Only {max, number} images fit here. The extra ones were skipped.",
+    "itemLabel": "Image {position} of {total, number}. Press Space to move it.",
+    "grabbed": "Image {position} of {total, number} picked up. Use the arrow keys to move, Space to drop, Escape to cancel.",
+    "moved": "Moved to position {position} of {total, number}.",
+    "dropped": "Dropped at position {position} of {total, number}.",
+    "cancelled": "Move canceled.",
+    "overPosition": "Position {position} of {total, number}.",
+    "pickTitle": "Add images to {label}",
+    "replace": "Replace",
+    "removeTip": "Remove this image",
+    "tileTip": "Click to replace. Drag to reorder.",
+    "replaceTitle": "Replace image {position, number}",
+    "replacedToast": "Image {position, number} replaced",
+    "replacedAnnounce": "Image {position, number} replaced.",
+    "orderToast": "Order changed"
+  },
+  "panel": {
+    "title": "File library",
+    "sub": "Every file on the site. Drop files anywhere here to upload.",
+    "refresh": "Refresh",
+    "upload": "Upload files",
+    "uploaded": "{count, plural, one {# file uploaded.} other {# files uploaded.}}",
+    "bucketLabel": "Storage",
+    "dropHere": "Drop to upload to {storage}",
+    "size": "Thumbnail size",
+    "count": "Showing {shown, number} of {total, number}",
+    "open": "Open details",
+    "select": "Select",
+    "selection": "Selected files",
+    "selected": "{count, number} selected",
+    "someUsed": "{count, number} in use",
+    "selectAll": "Select all shown",
+    "clearSelection": "Clear",
+    "deleteSelected": "Delete {count, number}",
+    "deleted": "{name} deleted.",
+    "deletedMany": "{count, number} files deleted.",
+    "deleteFailed": "Couldn’t delete: {names}",
+    "deletedPermanently": "{count, plural, one {# file deleted.} other {# files deleted.}}",
+    "emptyText": "Drop files anywhere on this page, or use Upload files."
+  },
+  "sheet": {
+    "file": "File",
+    "size": "Size",
+    "dimensions": "Dimensions",
+    "uploaded": "Uploaded",
+    "usedBy": "{count, plural, one {Used in # place} other {Used in # places}}",
+    "notUsed": "Not used anywhere",
+    "notUsedHint": "Safe to delete. You can undo for a few seconds.",
+    "replace": "Replace file",
+    "replaceHint": "Everything that uses this file switches to the new one ({count, number}).",
+    "delete": "Delete"
+  },
+  "replace": {
+    "working": "Replacing…",
+    "done": "{count, plural, =0 {File replaced.} one {File replaced. 1 place updated.} other {File replaced. # places updated.}}",
+    "failed": "Couldn’t replace the file: {error}",
+    "oldTitle": "Delete the old file?",
+    "oldBody": "{name} isn’t used anywhere now. Delete it to free space, or keep it.",
+    "oldKeep": "Keep it",
+    "oldDelete": "Delete old file",
+    "oldDeleted": "Old file deleted."
+  },
+  "confirm": {
+    "titleOne": "Delete {name}?",
+    "titleMany": "Delete {count, number} files?",
+    "body": "These files are still on the site. Deleting them leaves empty spots in:",
+    "noUndo": "This can’t be undone.",
+    "keep": "Keep",
+    "delete": "{count, plural, one {Delete file} other {Delete # files}}"
+  },
+  "use": {
+    "project": "Project {name}",
+    "gallery": "Gallery of {name}",
+    "hero": "Hero slide",
+    "team": "Team: {name}",
+    "voice": "Voice: {name}",
+    "ogImage": "Social share image",
+    "heroVideo": "Hero video",
+    "setting": "Setting {path}",
+    "wall": "Home wall",
+    "archive": "Archive Series row",
+    "reel": "Film strip frame",
+    "plate": "Series backdrop",
+    "poster": "Film poster"
+  },
+  "images": {
+    "title": "Photos & media",
+    "sub": "Every picture on the site, by page. Press Replace under a picture to change it. It’s saved at once, and you can undo.",
+    "summary": "{custom, number} of {total, number} pictures customised",
+    "summaryHint": "The rest show the built-in picture.",
+    "search": "Search pictures",
+    "onlyCustom": "Show only customised",
+    "groups": {
+      "home": "Home",
+      "series": "Series and voices",
+      "archive": "Archive",
+      "about": "About",
+      "projects": "Projects",
+      "site": "Sharing",
+      "code": "Built into the site"
+    },
+    "groupSub": {
+      "home": "The drifting wall behind the title, the two films that play on it, and the frame of each voice in the film strip.",
+      "series": "Each voice has a portrait and a backdrop for every chapter of the story.",
+      "archive": "The picture that appears when someone points at the Series row in the archive.",
+      "about": "Team photos. Names and roles are edited under People.",
+      "projects": "Covers and galleries are edited with each project. Click one to go there.",
+      "site": "The picture shown when a link to the site is shared.",
+      "code": "These are part of the site’s design and can’t be changed here. They are listed so nothing is a surprise."
+    },
+    "groupCount": "{custom, number} of {total, number} customised",
+    "viewOnSite": "View on site",
+    "reelFrames": "Film strip frames",
+    "reelHint": "The frame that stands for this voice in the home film strip.",
+    "portrait": "Portrait",
+    "portraitHint": "Small round and tall pictures of the voice.",
+    "plateHint": "Fills the background while this voice tells this chapter.",
+    "chapter": {
+      "world": "My world",
+      "day": "The day",
+      "did": "What I did",
+      "others": "The others"
+    },
+    "noun": {
+      "reel": "film strip frame of {name}",
+      "portrait": "portrait of {name}",
+      "plate": "{name}, {chapter} backdrop",
+      "team": "photo of {name}"
+    },
+    "archive": {
+      "label": "Series row picture",
+      "hint": "Shown when the Series row is hovered or opened."
+    },
+    "og": {
+      "label": "Share picture",
+      "hint": "1200 × 630 works best. Used by messaging apps and search results."
+    },
+    "wall": {
+      "label": "Lantern wall",
+      "builtin": "Showing the built-in pictures. Change anything and the wall becomes yours.",
+      "custom": "{count, plural, one {1 picture hangs on the wall.} other {# pictures hang on the wall.}} Drag to reorder.",
+      "restore": "Restore the built-in wall",
+      "fine": "Fine-tune framing",
+      "fineHint": "The wall shows tall slices of each picture. Point to what must stay in view and, if the subject is small, zoom in.",
+      "pickOne": "Choose a wall picture",
+      "itemLabel": "Wall picture {n, number}",
+      "zoom": "Zoom"
+    },
+    "films": {
+      "label": "Home films",
+      "hint": "Films that play on the wall. Drag to reorder.",
+      "extra": "{count, plural, one {1 more film is saved but the home page only plays the first two.} other {# more films are saved but the home page only plays the first two.}}",
+      "restore": "Restore the built-in films",
+      "poster": "Poster pictures",
+      "posterHint": "The still shown on a film’s plate before it plays and when motion is off. Without one, the plate’s own picture is used.",
+      "pickOne": "Choose a film",
+      "posterLabel": "Poster for film {n, number}"
+    },
+    "voice": {
+      "title": "Pictures on the site",
+      "hint": "Leave a picture on built-in to keep today’s look.",
+      "reel": "Film strip frame",
+      "plate": "Backdrop: {chapter}"
+    },
+    "add": "Add picture",
+    "change": "Replace",
+    "changePicture": "Change picture",
+    "framing": "Framing",
+    "reset": "Use built-in",
+    "remove": "Remove",
+    "status": {
+      "custom": "Customised",
+      "builtIn": "Built-in",
+      "empty": "Empty"
+    },
+    "toast": {
+      "set": "Saved: {name}.",
+      "reset": "Back to the built-in picture: {name}.",
+      "removed": "Removed: {name}.",
+      "frame": "Framing saved: {name}."
+    },
+    "saveFailed": "Couldn’t save: {error}",
+    "frameTitle": "Framing: {label}",
+    "frameHint": "Click the part of the picture that must stay in view.",
+    "done": "Done",
+    "emptyTeam": "No people yet. Add them under People.",
+    "emptyProjects": "No projects yet.",
+    "editProject": "Edit {name}",
+    "editInProjects": "Edit in Projects",
+    "noCover": "No cover",
+    "coverGallery": "Cover and {count, plural, one {1 gallery picture} other {# gallery pictures}}",
+    "coverOnly": "Cover",
+    "noMatch": "No pictures match.",
+    "clearFilters": "Clear search and filters",
+    "code": {
+      "favicon": {
+        "name": "Favicon and app icon",
+        "why": "Tiny icons drawn with the logo. They are generated with the site, not uploaded."
+      },
+      "logo": {
+        "name": "Fish mark logo",
+        "why": "Drawn in code so it can take any colour and animate."
+      },
+      "models": {
+        "name": "3D characters",
+        "why": "The models are built for the animation. Swapping a file would break the puppets."
+      },
+      "textures": {
+        "name": "Puppet textures",
+        "why": "They are wrapped around the models and only fit them."
+      },
+      "seal": {
+        "name": "Trust seal (Enamad)",
+        "why": "Issued by the registry and must be shown exactly as supplied."
+      }
+    }
+  },
+  "orphan": {
+    "text": "{count, plural, one {The old file isn’t used anywhere now.} other {# old files aren’t used anywhere now.}}",
+    "delete": "{count, plural, one {Delete file} other {Delete files}}",
+    "done": "{count, plural, one {File deleted.} other {# files deleted.}}",
+    "failed": "Couldn’t delete the file. It may still be in use."
+  }
+}

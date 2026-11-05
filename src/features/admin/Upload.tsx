@@ -1,16 +1,12 @@
+/* eslint-disable @next/next/no-img-element -- admin previews are arbitrary user-supplied URLs */
 "use client";
 
-import { useEffect, useId, useRef, useState, type DragEvent } from "react";
+import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { getSupabaseClient } from "@/shared/supabase/browser";
 import { isVideoUrl, type Bucket } from "@/shared/data/storage";
-
-const MAX_BYTES = 100 * 1024 * 1024;
-const ACCEPT = "image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime";
-const ACCEPT_LIST = ACCEPT.split(",");
-const COMPRESSIBLE = ["image/png", "image/jpeg", "image/webp"];
-
-type State = "idle" | "compressing" | "uploading" | "done" | "error";
+import { MediaStyles } from "./MediaStyles";
+import { UploadQueue, isHttpUrl, useHintText } from "./media-lib";
+import { acceptFor, onPasteImages, useFileDrop, useUploader, type UploadHints } from "./uploader";
 
 interface Props {
   bucket: Bucket;
@@ -27,122 +23,49 @@ interface Props {
   onChange: (url: string) => void;
   /** Restrict to images (gallery). */
   imagesOnly?: boolean;
-}
-
-async function compressImage(file: File): Promise<File> {
-  const { default: imageCompression } = await import("browser-image-compression");
-  const blob = await imageCompression(file, {
-    maxSizeMB: 1,
-    maxWidthOrHeight: 2560,
-    useWebWorker: true,
-    fileType: "image/webp",
-    initialQuality: 0.85,
-  });
-  const base = file.name.replace(/\.[^.]+$/, "") || "image";
-  return new File([blob], `${base}.webp`, { type: "image/webp" });
+  /** Long edge after the WebP re-encode. Default 2560. */
+  maxDimension?: number;
+  /** Non-blocking size / aspect guidance. */
+  hints?: UploadHints;
 }
 
 /**
- * Upload to Supabase Storage from the browser with the admin's session. Images are compressed
- * to WebP first; videos go up as-is. Also accepts a pasted URL.
+ * Compatible wrapper over the v2 pipeline (useUploader): drag files onto it, paste an image
+ * (Ctrl+V while it has focus), choose several files in "add" mode, per-file progress with
+ * Cancel / Retry. Images are compressed to WebP first; videos go up as-is. Also accepts a URL.
+ * New screens should prefer ImageField / ImageListField.
  */
-export function Upload({ bucket, label, hint, error, mode = "single", value, onChange, imagesOnly }: Props) {
-  const t = useTranslations("admin");
+export function Upload({ bucket, label, hint, error, mode = "single", value, onChange, imagesOnly, maxDimension, hints }: Props) {
+  const t = useTranslations("adminMedia");
   const id = useId();
-  const [state, setState] = useState<State>("idle");
-  const [message, setMessage] = useState("");
-  const [over, setOver] = useState(false);
   const [draft, setDraft] = useState("");
-  const [localPreview, setLocalPreview] = useState<{ src: string; video: boolean } | null>(null);
-  const objectUrl = useRef<string | null>(null);
+  const [urlError, setUrlError] = useState("");
+  const uploader = useUploader({ bucket, imagesOnly, maxDimension, hints, onUploaded: (url) => onChange(url) });
+  const hintLine = useHintText(hints);
 
-  useEffect(
-    () => () => {
-      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    },
-    [],
-  );
-
-  const accept = imagesOnly ? ACCEPT_LIST.filter((a) => a.startsWith("image/")).join(",") : ACCEPT;
-  const busy = state === "compressing" || state === "uploading";
-
-  async function handleFile(original: File) {
-    if (busy) return;
-    if (!accept.split(",").includes(original.type)) {
-      setState("error");
-      setMessage(imagesOnly ? t("upload.wrongTypeImage") : t("upload.wrongType"));
-      return;
-    }
-    if (original.size > MAX_BYTES) {
-      setState("error");
-      setMessage(t("upload.tooBig"));
-      return;
-    }
-
-    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    objectUrl.current = URL.createObjectURL(original);
-    setLocalPreview({ src: objectUrl.current, video: original.type.startsWith("video/") });
-
-    try {
-      let file = original;
-      if (COMPRESSIBLE.includes(original.type)) {
-        setState("compressing");
-        setMessage(t("upload.compressing"));
-        file = await compressImage(original);
-      }
-      setState("uploading");
-      setMessage(t("upload.uploading"));
-
-      const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const storage = getSupabaseClient().storage.from(bucket);
-      const { error } = await storage.upload(path, file, { contentType: file.type, upsert: false });
-      if (error) throw error;
-      const url = storage.getPublicUrl(path).data.publicUrl;
-
-      onChange(url);
-      setState("done");
-      setMessage(mode === "add" ? t("upload.added") : t("upload.done"));
-      if (mode === "add") setLocalPreview(null);
-    } catch (err) {
-      setState("error");
-      setMessage(t("upload.failed", { error: err instanceof Error ? err.message : String(err) }));
-      setLocalPreview(null);
-    }
-  }
-
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    setOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) void handleFile(file);
+  const take = (files: File[]) => {
+    setUrlError("");
+    void uploader.upload(mode === "single" ? files.slice(0, 1) : files);
   };
+  const { over, props: drop } = useFileDrop(take);
 
   const addDraft = () => {
     const url = draft.trim();
-    if (!/^https?:\/\/\S+$/i.test(url)) {
-      setState("error");
-      setMessage(t("upload.badUrl"));
+    if (!isHttpUrl(url)) {
+      setUrlError(t("link.invalid"));
       return;
     }
+    setUrlError("");
     onChange(url);
     setDraft("");
-    setState("done");
-    setMessage(t("upload.added"));
   };
 
-  const preview = localPreview ?? (mode === "single" && value ? { src: value, video: isVideoUrl(value) } : null);
+  const describedBy = [`${id}-hint`, error ? `${id}-err` : "", urlError ? `${id}-uerr` : ""].filter(Boolean).join(" ");
+  const preview = mode === "single" && value ? { src: value, video: isVideoUrl(value) } : null;
 
   return (
-    <div
-      className="adm-up adm-up-zone"
-      data-over={over ? "true" : "false"}
-      onDragOver={(e) => {
-        e.preventDefault();
-        if (!over) setOver(true);
-      }}
-      onDragLeave={() => setOver(false)}
-      onDrop={onDrop}
-    >
+    <div className="adm-up adm-up-zone" data-over={over ? "true" : "false"} onPaste={onPasteImages(take)} {...drop}>
+      <MediaStyles />
       <label className="lbf-label" htmlFor={`${id}-url`}>
         {label}
       </label>
@@ -158,7 +81,7 @@ export function Upload({ bucket, label, hint, error, mode = "single", value, onC
             value={value ?? ""}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={error ? true : undefined}
-            aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}${error ? ` ${id}-err` : ""}`}
+            aria-describedby={describedBy}
           />
         ) : (
           <>
@@ -168,7 +91,7 @@ export function Upload({ bucket, label, hint, error, mode = "single", value, onC
               type="url"
               dir="ltr"
               inputMode="url"
-              placeholder={t("upload.pastePlaceholder")}
+              placeholder={t("link.placeholder")}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -177,56 +100,51 @@ export function Upload({ bucket, label, hint, error, mode = "single", value, onC
                   addDraft();
                 }
               }}
-              aria-invalid={error ? true : undefined}
-            aria-describedby={`${id}-status${hint ? ` ${id}-hint` : ""}${error ? ` ${id}-err` : ""}`}
+              aria-invalid={error || urlError ? true : undefined}
+              aria-describedby={describedBy}
             />
             <button type="button" className="lbf-textbtn" onClick={addDraft} disabled={!draft.trim()}>
-              {t("upload.addUrl")}
+              {t("link.add")}
             </button>
           </>
         )}
-        <span className="adm-up-file lbf-textbtn" aria-disabled={busy}>
-          {t("upload.choose")}
+        <span className="adm-up-file lbf-textbtn">
+          {mode === "add" ? t("upload.chooseMany") : t("upload.choose")}
           <input
             type="file"
-            accept={accept}
-            disabled={busy}
-            aria-label={`${t("upload.choose")}: ${label}`}
+            accept={acceptFor(imagesOnly)}
+            multiple={mode === "add"}
+            aria-label={`${mode === "add" ? t("upload.chooseMany") : t("upload.choose")}: ${label}`}
             onChange={(e) => {
-              const file = e.target.files?.[0];
+              const files = Array.from(e.target.files ?? []);
               e.target.value = "";
-              if (file) void handleFile(file);
+              if (files.length) take(files);
             }}
           />
         </span>
       </div>
 
-      {hint && (
-        <span className="lbf-hint" id={`${id}-hint`}>
-          {hint}
-        </span>
-      )}
+      <span className="lbf-hint" id={`${id}-hint`}>
+        {[hint, hintLine, over ? "" : mode === "add" ? t("upload.dropMany") : t("upload.dropOne")].filter(Boolean).join(" · ")}
+      </span>
 
       {preview && (
-        <div className="adm-up-preview" data-busy={busy ? "true" : "false"}>
+        <div className="adm-up-preview" data-busy={uploader.active > 0 ? "true" : "false"}>
           {preview.video ? (
             <video src={preview.src} autoPlay muted loop playsInline />
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={preview.src} alt="" />
           )}
         </div>
       )}
 
-      {error && (
-        <span className="lbf-error" id={`${id}-err`} role="alert">
-          {error}
+      <UploadQueue uploader={uploader} compact />
+
+      {(error || urlError) && (
+        <span className="lbf-error" id={error ? `${id}-err` : `${id}-uerr`} role="alert">
+          {error || urlError}
         </span>
       )}
-
-      <span className="adm-up-status" id={`${id}-status`} data-state={state} role={state === "error" ? "alert" : "status"}>
-        {state === "idle" ? (imagesOnly ? t("upload.idleImage") : t("upload.idle")) : message}
-      </span>
     </div>
   );
 }

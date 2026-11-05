@@ -6,6 +6,7 @@ import { SITE } from "@/shared/content/site";
 import { TELLER_IDS } from "@/shared/content/characters";
 import { HERO_VIDEOS } from "./hero";
 import { PAYMENT_LINKS } from "./support";
+import { isOptimisable } from "@/shared/lib/imageUrl";
 
 export interface StudioSettings {
   name: string;
@@ -51,7 +52,31 @@ export interface HeroVideo {
   title: string;
   /** Slug of the project the video links to. */
   project: string;
+  /** Still shown on its wall plate before/instead of the film. "" = the plate's own still. */
+  poster?: string;
 }
+
+/** One picture on the home lantern wall. */
+export interface WallImage {
+  /** Site-relative path (/plates/s09.webp is a built-in still) or http(s) URL. */
+  src: string;
+  /** Where the subject is, percent [x, y] from the top-left: the tall crop is centred on it. */
+  focus?: [number, number];
+  /** 1..3: tighter crop on a subject that sits small in the frame. */
+  zoom?: number;
+  alt?: string;
+}
+
+/** The archive's pinned Series row. */
+export interface ArchiveSettings {
+  /** "" = the built-in still (s20). */
+  pinnedImage: string;
+  pinnedFocus?: [number, number];
+  pinnedAlt?: string;
+}
+
+export type ChapterPlates = { world?: string; day?: string; did?: string; others?: string };
+export const PLATE_CHAPTERS = ["world", "day", "did", "others"] as const;
 
 /**
  * Per-voice look, keyed by teller slug (TellerId). Every field is optional: missing = the code
@@ -66,6 +91,10 @@ export interface TellerLook {
   accent?: [number, number, number];
   /** Stage tint hue override (degrees), used for every chapter. */
   stageHue?: number;
+  /** Frame shown for this voice in the home "reel": site-relative path or http(s) URL. */
+  reel?: string;
+  /** Backdrop image per chapter on the series page. Missing chapter = the built-in plate. */
+  plates?: ChapterPlates;
 }
 export type TellersSettings = Record<string, TellerLook>;
 
@@ -78,6 +107,11 @@ export interface Settings {
   series: SeriesSettings;
   heroVideos: HeroVideo[];
   tellers: TellersSettings;
+  /** Home lantern wall. [] = the built-in stills. */
+  wall: WallImage[];
+  archive: ArchiveSettings;
+  /** Focus point per team member id, percent [x, y]. */
+  teamFocus: Record<string, [number, number]>;
 }
 export type SettingKey = keyof Settings;
 export const SETTING_KEYS = [
@@ -89,6 +123,9 @@ export const SETTING_KEYS = [
   "series",
   "heroVideos",
   "tellers",
+  "wall",
+  "archive",
+  "teamFocus",
 ] as const satisfies readonly SettingKey[];
 
 const PAYMENT_LABELS: Record<string, string> = { worldwide: "Support in Dollars", iran: "Support in Rial" };
@@ -109,6 +146,9 @@ export const SETTING_DEFAULTS: Settings = {
   series: { title: SITE.seriesTitle, year: SITE.seriesYear, url: SITE.seriesUrl },
   heroVideos: HERO_VIDEOS.map((v) => ({ src: v.src, title: v.title, project: v.project })),
   tellers: {},
+  wall: [],
+  archive: { pinnedImage: "" },
+  teamFocus: {},
 };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -157,6 +197,16 @@ function urlOrPath(v: unknown, field: string, required = false): Result<string> 
   if (hasUnsafeChars(s.value)) return bad(`${field} contains backslashes or control characters`);
   if ((s.value.startsWith("/") && !s.value.startsWith("//")) || s.value.startsWith("#")) return s;
   return httpUrl(s.value, field);
+}
+
+/** A picture the site shows through its image optimiser: a site path, or a file in this site's storage. */
+function imageUrlOrPath(v: unknown, field: string, required = false): Result<string> {
+  const s = urlOrPath(v, field, required);
+  if (!s.ok || !s.value) return s;
+  if (s.value.startsWith("#") || !isOptimisable(s.value)) {
+    return bad(`${field} must be a picture uploaded here (pick it from the library or upload it), not a link to another website`);
+  }
+  return s;
 }
 
 function email(v: unknown, field: string): Result<string> {
@@ -275,6 +325,19 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => Result<Settings[K]> } = {
         if (!f.ok) return f;
         look.focus = f.value as [number, number];
       }
+      const reel = imageUrlOrPath(raw.reel, `${slug} reel frame`);
+      if (!reel.ok) return reel;
+      if (reel.value) look.reel = reel.value;
+      if (raw.plates != null) {
+        if (!isObj(raw.plates)) return bad(`${slug} backdrops are invalid`);
+        const plates: ChapterPlates = {};
+        for (const c of PLATE_CHAPTERS) {
+          const u = imageUrlOrPath(raw.plates[c], `${slug} ${c} backdrop`);
+          if (!u.ok) return u;
+          if (u.value) plates[c] = u.value;
+        }
+        if (Object.keys(plates).length) look.plates = plates;
+      }
       if (raw.accent != null) {
         const a = tuple(raw.accent, `${slug} accent`, [[0.2, 0.95], [0, 0.37], [0, 360]]);
         if (!a.ok) return a;
@@ -290,13 +353,65 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => Result<Settings[K]> } = {
     return ok(out);
   },
   heroVideos: (v) =>
-    list<HeroVideo>(v, "Hero videos", 12, (it, l) =>
-      fields<HeroVideo>({
+    list<HeroVideo>(v, "Hero videos", 12, (it, l) => {
+      const base = fields<HeroVideo>({
         src: urlOrPath(it.src, `${l} file`, true),
         title: str(it.title, `${l} title`, 120, true),
         project: str(it.project, `${l} project`, 120),
-      }),
-    ),
+      });
+      if (!base.ok) return base;
+      const poster = imageUrlOrPath(it.poster, `${l} poster`);
+      if (!poster.ok) return poster;
+      return ok(poster.value ? { ...base.value, poster: poster.value } : base.value);
+    }),
+  wall: (v) =>
+    list<WallImage>(v, "Wall images", 40, (it, l) => {
+      const src = imageUrlOrPath(it.src, `${l} image`, true);
+      if (!src.ok) return src;
+      const out: WallImage = { src: src.value };
+      if (it.focus != null) {
+        const f = tuple(it.focus, `${l} focus point`, [[0, 100], [0, 100]]);
+        if (!f.ok) return f;
+        out.focus = f.value as [number, number];
+      }
+      if (it.zoom != null) {
+        const z = num(it.zoom, `${l} zoom`, 1, 3);
+        if (!z.ok) return z;
+        if (z.value !== 1) out.zoom = z.value;
+      }
+      const alt = str(it.alt, `${l} description`, 300);
+      if (!alt.ok) return alt;
+      if (alt.value) out.alt = alt.value;
+      return ok(out);
+    }),
+  archive(v) {
+    if (!isObj(v)) return bad("archive is invalid");
+    const img = imageUrlOrPath(v.pinnedImage, "Pinned image");
+    if (!img.ok) return img;
+    const out: ArchiveSettings = { pinnedImage: img.value };
+    if (v.pinnedFocus != null) {
+      const f = tuple(v.pinnedFocus, "Pinned image focus point", [[0, 100], [0, 100]]);
+      if (!f.ok) return f;
+      out.pinnedFocus = f.value as [number, number];
+    }
+    const alt = str(v.pinnedAlt, "Pinned image description", 300);
+    if (!alt.ok) return alt;
+    if (alt.value) out.pinnedAlt = alt.value;
+    return ok(out);
+  },
+  teamFocus(v) {
+    if (!isObj(v)) return bad("teamFocus is invalid");
+    const out: Record<string, [number, number]> = {};
+    const entries = Object.entries(v);
+    if (entries.length > 200) return bad("teamFocus has too many entries");
+    for (const [id, raw] of entries) {
+      if (!id || id.length > 80) return bad("teamFocus has an invalid member id");
+      const f = tuple(raw, "Team focus point", [[0, 100], [0, 100]]);
+      if (!f.ok) return f;
+      out[id] = f.value as [number, number];
+    }
+    return ok(out);
+  },
 };
 
 export const isSettingKey = (k: unknown): k is SettingKey =>

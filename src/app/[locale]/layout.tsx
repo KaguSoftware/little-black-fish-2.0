@@ -71,6 +71,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     socials: settings.socials,
     series: settings.series,
     heroVideos: settings.heroVideos,
+    wall: settings.wall,
+    archive: settings.archive,
     roster: rosterFrom(series.characters, settings.tellers),
     hiddenChapters,
   };

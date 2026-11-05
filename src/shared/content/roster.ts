@@ -10,7 +10,7 @@
  */
 import { TELLERS, TELLER_IDS, tellerPortrait } from "./characters";
 import type { Oklch, Teller, TellerId } from "./types";
-import type { TellerLook } from "../data/settingsSchema";
+import type { ChapterPlates, TellerLook } from "../data/settingsSchema";
 
 /** Serializable per-voice data handed to client components. */
 export interface RosterEntry {
@@ -23,6 +23,10 @@ export interface RosterEntry {
   portrait: string;
   /** Focus point in percent (object-position). */
   focus: [number, number];
+  /** Reel frame override (image URL), null = the built-in still. */
+  reel: string | null;
+  /** Backdrop overrides per chapter (image URLs). */
+  plates: ChapterPlates;
 }
 
 /** A teller with the roster overrides applied. */
@@ -30,6 +34,8 @@ export interface RosterTeller extends Teller {
   portraitUrl: string;
   portraitFocus: [number, number];
   custom: boolean;
+  /** Reel frame override (image URL), null = the built-in still. */
+  reel: string | null;
 }
 
 export const DEFAULT_FOCUS: [number, number] = [50, 50];
@@ -44,6 +50,8 @@ export function rosterEntry(id: TellerId, look?: TellerLook | null): RosterEntry
     stageHue: look?.stageHue ?? null,
     portrait: look?.portrait || tellerPortrait(id),
     focus: look?.focus ?? (look?.portrait ? CUSTOM_FOCUS : DEFAULT_FOCUS),
+    reel: look?.reel || null,
+    plates: look?.plates ?? {},
   };
 }
 
@@ -70,6 +78,8 @@ function apply(t: Teller, e: RosterEntry): RosterTeller {
     portraitUrl: e.portrait,
     portraitFocus: e.focus,
     custom: e.portrait !== tellerPortrait(t.id),
+    reel: e.reel,
+    plates: { ...t.plates, ...e.plates },
   };
 }
 

@@ -56,6 +56,9 @@ interface Row {
   featured: boolean;
   still: StillId | null;
   image: string | null;
+  /** Focus point of the image in percent (admin), null = centred. */
+  focus?: [number, number] | null;
+  alt?: string;
 }
 
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
@@ -104,7 +107,7 @@ function StillImg({ id, sizes, lazy }: { id: StillId; sizes: string; lazy?: bool
 }
 
 /** A database cover through the Next image optimiser (it negotiates AVIF/WebP itself). */
-function CoverImg({ src, alt, sizes, lazy }: { src: string; alt: string; sizes: string; lazy?: boolean }) {
+function CoverImg({ src, alt, sizes, lazy, focus }: { src: string; alt: string; sizes: string; lazy?: boolean; focus?: [number, number] | null }) {
   return (
     <picture>
       <img
@@ -113,6 +116,7 @@ function CoverImg({ src, alt, sizes, lazy }: { src: string; alt: string; sizes: 
         draggable={false}
         decoding="async"
         loading={lazy ? "lazy" : undefined}
+        style={focus ? { objectPosition: `${focus[0]}% ${focus[1]}%` } : undefined}
       />
     </picture>
   );
@@ -120,7 +124,7 @@ function CoverImg({ src, alt, sizes, lazy }: { src: string; alt: string; sizes: 
 
 function RowImg({ row, sizes, lazy }: { row: Row; sizes: string; lazy?: boolean }) {
   if (row.still) return <StillImg id={row.still} sizes={sizes} lazy={lazy} />;
-  if (row.image) return <CoverImg src={row.image} alt={row.title} sizes={sizes} lazy={lazy} />;
+  if (row.image) return <CoverImg src={row.image} alt={row.alt ?? row.title} sizes={sizes} lazy={lazy} focus={row.focus} />;
   return null;
 }
 
@@ -168,7 +172,7 @@ export function ArchivePage({
   back,
   showFeatured = true,
 }: ArchivePageProps) {
-  const { socials } = useSiteData();
+  const { socials, archive } = useSiteData();
   const t = useTranslations("archive");
   const tc = useTranslations("common");
   const locale = useLocale();
@@ -186,8 +190,11 @@ export function ArchivePage({
             role: t("featuredRole"),
             href: SERIES_HREF,
             featured: true,
-            still: "s20" as StillId,
-            image: null,
+            // The admin's pinned picture replaces the built-in still (s20).
+            still: archive.pinnedImage ? null : ("s20" as StillId),
+            image: archive.pinnedImage || null,
+            focus: archive.pinnedFocus ?? null,
+            alt: archive.pinnedAlt,
           },
         ]
       : []),

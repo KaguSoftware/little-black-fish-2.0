@@ -1,4 +1,5 @@
 import { getImageProps } from "next/image";
+import { isOptimisable } from "@/shared/lib/imageUrl";
 import type { Locale } from "@/i18n/routing";
 import { pick } from "./localize";
 import type { CategoryRow, ProjectRow } from "./types";
@@ -59,6 +60,8 @@ export function toProjectCard(row: ProjectRow, locale: Locale | string, categori
  * to keep its markup: <img {...cardImage(url, sizes)} alt=… />.
  */
 export function cardImage(src: string, sizes: string, width = 1600, height = 900) {
+  // A picture the optimiser may not fetch (any other host) would throw in dev and 400 in production: use it as it is.
+  if (!isOptimisable(src)) return { src, srcSet: undefined, sizes: undefined };
   const { props } = getImageProps({ src, alt: "", width, height, sizes });
   return { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
 }

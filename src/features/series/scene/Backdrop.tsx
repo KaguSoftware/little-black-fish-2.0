@@ -3,8 +3,7 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { AdditiveBlending, BackSide, Color, type Mesh, type ShaderMaterial, type Texture, Vector2 } from "three";
-import { stillPlate } from "@/shared/content/stills";
-import type { StillId } from "@/shared/content/types";
+import { plateSrc } from "@/shared/content/stills";
 import { damp, noise1 } from "@/shared/lib/math";
 import { runtime } from "@/shared/lib/runtime";
 import { useSeries, useUI } from "@/shared/state/store";
@@ -149,7 +148,7 @@ void main() {
 `;
 
 interface Slot {
-  id: StillId | null;
+  id: string | null;
   url: string | null;
   tex: Texture | null;
   aspect: number;
@@ -328,10 +327,10 @@ export function Backdrop() {
   );
 }
 
-function updateSlot(slot: Slot, id: StillId | null, lib: PlateLibrary) {
+function updateSlot(slot: Slot, id: string | null, lib: PlateLibrary) {
   if (id !== slot.id) {
     slot.id = id;
-    slot.url = id ? stillPlate(id) : null;
+    slot.url = id ? plateSrc(id) : null;
     if (slot.url) lib.request(slot.url);
   }
   if (!slot.url) return; // no plate wanted: keep the old texture so it can fade out

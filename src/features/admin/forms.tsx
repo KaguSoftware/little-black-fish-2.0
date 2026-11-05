@@ -2,8 +2,64 @@
 
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
+import { Link } from "@/i18n/navigation";
 import { Field } from "./EditorShell";
 import { DownIcon, UpIcon } from "./parts";
+import { Icon } from "./icons-ux";
+import { toast } from "./toast";
+
+/** Where each section's public counterpart lives (for the "View on site" link). */
+const PUBLIC_PATH: Record<string, string> = {
+  dashboard: "/",
+  content: "/",
+  images: "/",
+  projects: "/projects",
+  categories: "/projects",
+  team_members: "/about",
+  team: "/about",
+  series: "/",
+  series_characters: "/",
+  series_chapters: "/",
+  settings: "/",
+};
+
+/** The header every section shares: title, one sentence, then "View on site" and the primary action in the same place. */
+export function PanelHead({
+  id,
+  title,
+  sub,
+  actions,
+  viewPath,
+}: {
+  id: string;
+  title: string;
+  sub?: string;
+  /** The section's primary action (always the last, filled button). */
+  actions?: ReactNode;
+  /** Override or disable (null) the public page this section edits. */
+  viewPath?: string | null;
+}) {
+  const t = useTranslations("admin");
+  const path = viewPath === undefined ? PUBLIC_PATH[id] : (viewPath ?? undefined);
+  return (
+    <div className="adm-panel-head">
+      <div className="adm-panel-titles">
+        <h2 className="adm-h2">{title}</h2>
+        {sub && <p className="adm-sub">{sub}</p>}
+      </div>
+      <div className="ux-acts">
+        {path && (
+          <Link href={path} target="_blank" rel="noopener" className="ux-btn" data-quiet="true">
+            {t("viewOnSite")}
+            <Icon name="external" className="ux-btn-ico" />
+            <span className="sr-only"> ({t("opensNewTab")})</span>
+          </Link>
+        )}
+        {actions}
+      </div>
+    </div>
+  );
+}
 
 /** A page-level panel: heading, sub line, optional actions, focusable root for focus management. */
 export function PanelFrame({
@@ -13,6 +69,7 @@ export function PanelFrame({
   title,
   sub,
   actions,
+  viewPath,
   children,
 }: {
   id: string;
@@ -21,17 +78,12 @@ export function PanelFrame({
   title: string;
   sub?: string;
   actions?: ReactNode;
+  viewPath?: string | null;
   children: ReactNode;
 }) {
   return (
     <section className="adm-panel" id={`adm-panel-${id}`} aria-labelledby={labelledBy} hidden={hidden} tabIndex={-1}>
-      <div className="adm-panel-head">
-        <div>
-          <h2 className="adm-h2">{title}</h2>
-          {sub && <p className="adm-sub">{sub}</p>}
-        </div>
-        {actions}
-      </div>
+      <PanelHead id={id} title={title} sub={sub} actions={actions} viewPath={viewPath} />
       {children}
     </section>
   );
@@ -188,8 +240,14 @@ export function ListEditor<T>({
                   </button>
                   <button
                     type="button"
-                    className="lbf-textbtn adm-danger"
-                    onClick={() => onChange(items.filter((_, j) => j !== i))}
+                    className="ux-btn"
+                    data-tone="danger"
+                    data-quiet="true"
+                    onClick={() => {
+                      const before = items;
+                      onChange(items.filter((_, j) => j !== i));
+                      toast({ text: t("removedItem", { title: itemTitle(i + 1) }), undo: () => onChange(before) });
+                    }}
                   >
                     {t("remove")}
                     <span className="sr-only">: {itemTitle(i + 1)}</span>

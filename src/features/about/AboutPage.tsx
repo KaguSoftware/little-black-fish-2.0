@@ -1,6 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { instagramUrl } from "@/shared/content/team";
 import { getTeam } from "@/shared/data/team";
+import { getSettings } from "@/shared/data/settings";
+import { cardImage } from "@/shared/data/cards";
 import { FishMark } from "@/shared/ui/FishMark";
 
 interface AboutSection {
@@ -17,7 +19,7 @@ interface AboutSection {
 export async function AboutPage() {
   const locale = await getLocale();
   const t = await getTranslations("about");
-  const team = await getTeam();
+  const [team, { teamFocus }] = await Promise.all([getTeam(), getSettings()]);
   const sections = t.raw("sections") as AboutSection[];
   const num = new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false });
   const lang = locale === "fa" ? "fa" : "en";
@@ -71,7 +73,15 @@ export async function AboutPage() {
               <div className="ab-photo">
                 {m.photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.photo} alt="" width={600} height={800} loading="lazy" decoding="async" />
+                  <img
+                    {...cardImage(m.photo, "(max-width: 640px) 50vw, 25vw", 600, 800)}
+                    alt=""
+                    width={600}
+                    height={800}
+                    loading="lazy"
+                    decoding="async"
+                    style={teamFocus[m.id] ? { objectPosition: `${teamFocus[m.id][0]}% ${teamFocus[m.id][1]}%` } : undefined}
+                  />
                 ) : (
                   <span className="ab-mono" aria-hidden="true">
                     <FishMark size={28} />

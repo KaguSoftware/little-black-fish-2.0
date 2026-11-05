@@ -8,7 +8,7 @@ export type Json = string | number | boolean | null | Json[] | { [k: string]: Js
 type Tree = { [k: string]: unknown } | unknown[];
 
 /** Namespaces never offered for editing (admin UI chrome must not be breakable from the admin). */
-export const NON_EDITABLE_NAMESPACES: readonly string[] = ["admin"];
+export const NON_EDITABLE_NAMESPACES: readonly string[] = ["admin", "adminMedia"];
 
 /** series.json sections owned by the series_chapters / series_characters tables. */
 export const TABLE_OWNED_PREFIXES: readonly string[] = [

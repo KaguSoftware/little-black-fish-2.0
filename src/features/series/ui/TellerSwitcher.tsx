@@ -1,5 +1,6 @@
 "use client";
 
+import { smallImage } from "@/shared/lib/imageUrl";
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
@@ -98,7 +99,7 @@ export function TellerSwitcher() {
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={t.portraitUrl}
+                    src={smallImage(t.portraitUrl, 128)}
                     alt=""
                     width={48}
                     height={64}

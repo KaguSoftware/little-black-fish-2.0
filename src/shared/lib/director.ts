@@ -1,5 +1,5 @@
 import { Vector3 } from "three";
-import type { ChapterId, StillId, Teller, TellerId } from "../content/types";
+import type { ChapterId, Teller, TellerId } from "../content/types";
 import { CHAPTER_BY_ID, TYPE_WINDOW, resolveProgress } from "../content/chapters";
 import { TELLER_BY_ID, TELLER_IDS } from "../content/characters";
 import { tellerView } from "../content/roster";
@@ -241,7 +241,7 @@ export function computeFrame(input: DirectorInput): FrameParams {
 
   // ── Plates ───────────────────────────────────────────────────────────────
   const dominant = target;
-  const plateOf = (id: TellerId, c: ChapterId): StillId | null => TELLER_BY_ID[id].plates[c] ?? null;
+  const plateOf = (id: TellerId, c: ChapterId): string | null => tellerView(id).plates[c] ?? null;
   if (f.settled < 0.995) {
     let second: TellerId = dominant;
     let sw = -1;

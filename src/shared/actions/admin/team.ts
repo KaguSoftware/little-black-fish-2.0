@@ -6,6 +6,7 @@ import { hasUnsafeChars } from "@/shared/data/settingsSchema";
 import { isSupabaseStorageUrl, storagePath } from "@/shared/data/storage";
 import type { ActionResult } from "@/shared/data/types";
 import { adminUser, audit, BUCKETS, fail, findReferences, refresh, text, UNAUTHORIZED } from "./lib";
+import { getAdminSetting, saveSettings } from "./settings";
 import type { TeamMemberInput } from "./types";
 
 /** "@name", "name" or an instagram.com URL to the bare handle; "" for none; null when invalid. */
@@ -105,7 +106,11 @@ export async function createTeamMember(input: TeamMemberInput): Promise<ActionRe
   }
 }
 
-export async function updateTeamMember(id: string, input: TeamMemberInput): Promise<ActionResult> {
+/**
+ * `opts.keepOldFile`: do not delete a replaced photo here. The Images section offers an Undo that
+ * re-saves the old URL, so the file must outlive the Undo window; it offers the deletion itself afterwards.
+ */
+export async function updateTeamMember(id: string, input: TeamMemberInput, opts?: { keepOldFile?: boolean }): Promise<ActionResult> {
   const user = await adminUser();
   if (!user) return UNAUTHORIZED;
   try {
@@ -119,7 +124,7 @@ export async function updateTeamMember(id: string, input: TeamMemberInput): Prom
     if (error) return fail("team update", error, "Failed to update member");
 
     // Row first, file second: a replaced photo is cleaned up only after the new one is saved.
-    if (before?.photo_url && before.photo_url !== parsed.row.photo_url) await cleanupPhoto(before.photo_url as string);
+    if (!opts?.keepOldFile && before?.photo_url && before.photo_url !== parsed.row.photo_url) await cleanupPhoto(before.photo_url as string);
 
     await audit(user, "team.update", `${parsed.row.name_en} (${id})`);
     refresh(TAGS.team);
@@ -159,6 +164,17 @@ export async function deleteTeamMember(id: string): Promise<ActionResult> {
     if (error) return fail("team delete", error, "Failed to delete member");
 
     await cleanupPhoto(member.photo_url as string | null);
+    // Drop the deleted member's framing from the shared teamFocus map (best effort).
+    try {
+      const focus = await getAdminSetting("teamFocus");
+      if (focus.success && focus.data && id in focus.data) {
+        const next = { ...focus.data };
+        delete next[id];
+        await saveSettings("teamFocus", next);
+      }
+    } catch (e) {
+      console.error("[admin/team] prune teamFocus:", e);
+    }
     await audit(user, "team.delete", `${member.name_en} (${id})`);
     refresh(TAGS.team);
     return { success: true };
