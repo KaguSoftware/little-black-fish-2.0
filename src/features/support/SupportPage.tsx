@@ -235,6 +235,16 @@ transition:color .3s var(--ease-out-quint),transform .45s var(--ease-out-quint)}
 .sp-seal img{display:block;inline-size:auto;max-block-size:5.5rem}
 @media (min-width:48rem){.sp-fine{grid-template-columns:minmax(0,1fr) auto;align-items:end}.sp-seal{justify-self:end}}
 
+/* No pointer to hover with (phones, tablets): show the healed, lit state all the time. */
+@media (hover:none){
+.sp-link .sp-cut-rest{opacity:0}
+.sp-link .sp-cut-heal{opacity:1}
+.sp-link .sp-label{transform:translateX(.12em)}
+.sp-link .sp-arrow{color:var(--teller-child);transform:translate(3px,-3px)}
+[dir=rtl] .sp-link .sp-label{transform:translateX(-.12em)}
+[dir=rtl] .sp-link .sp-arrow{transform:translate(-3px,-3px)}
+}
+
 @keyframes sp-in{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
 @keyframes sp-grow{from{transform:scaleX(0)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.sp-row,.sp-prog{animation-name:sp-fade}.sp-fill{animation:none}
