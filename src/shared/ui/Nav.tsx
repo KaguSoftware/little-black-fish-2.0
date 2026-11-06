@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { navigateWithIris } from "../transition/navigate";
+import { useUI } from "../state/store";
 import { FishMark } from "./FishMark";
 
 /**
@@ -88,9 +89,18 @@ html:has(dialog.lbf-menu[open]){overflow:hidden;scrollbar-gutter:stable}
 @keyframes lbf-menu-in{from{opacity:0}to{opacity:1}}
 @keyframes lbf-menu-item{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
+.lbf-menu-motion{display:inline-flex;align-items:center;min-height:2.75rem;padding:0 .15rem;border:0;background:none;cursor:pointer;color:var(--ink-dim);
+font-family:var(--font-sans);font-weight:500;font-size:var(--step-0);-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:color .12s linear}
+.lbf-menu-motion:hover,.lbf-menu-motion:focus-visible{color:var(--ink)}
+.lbf-menu-motion:active{transform:scale(.97)}
+
 @media (max-width:40rem){
 .lbf-nav-desktop{display:none}
 .lbf-nav-menu{display:inline-flex}
+/* A solid-enough bar so the logo and Menu never fight the page behind them. */
+.lbf-nav::before{inset:0;background:linear-gradient(to bottom,oklch(0.08 0.01 215/.94),oklch(0.08 0.01 215/.82));
+-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 1px 0 var(--hairline)}
+.lbf-nav-menu{text-shadow:none}
 }
 @media (max-width:30rem){
 .lbf-nav-word{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -107,6 +117,8 @@ export function Nav() {
   const locale = useLocale() as Locale;
   const t = useTranslations("nav");
   const tc = useTranslations("common");
+  const paused = useUI((st) => st.paused);
+  const togglePaused = useUI((st) => st.togglePaused);
   const [open, setOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   // Navigating (iris or not) closes the menu: reset during render when the page or language changes.
@@ -272,6 +284,9 @@ export function Nav() {
           >
             {langName}
           </Link>
+          <button type="button" className="lbf-menu-motion" onClick={togglePaused}>
+            {paused ? tc("playMotion") : tc("pauseMotion")}
+          </button>
         </div>
       </dialog>
     </header>

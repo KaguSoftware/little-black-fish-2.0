@@ -156,6 +156,7 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
 
   return (
     <EditorShell
+      bilingual
       title={row ? t("projects.editTitle") : t("projects.newTitle")}
       submitLabel={row ? t("update") : t("projects.create")}
       saving={saving}
@@ -178,7 +179,7 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
         />
       </div>
 
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <Field label={t("titleEn")} required error={errors.titleEn}>
           {({ id, describedBy, invalid }) => (
             <input
@@ -270,7 +271,7 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
       </div>
 
       <div className="adm-group">
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <Field label={t("descriptionEn")}>
           {({ id }) => (
             <textarea
@@ -331,7 +332,7 @@ export function ProjectEditor({ row, published, categories, onClose, onSaved }: 
         <div className="adm-collapse adm-form" data-open={f.supportEnabled ? "true" : "false"}>
           <p className="adm-note">{t("projects.supportNote")}</p>
           {SUPPORT_TEXT.map((field) => (
-            <div className="adm-pair" key={field}>
+            <div className="adm-pair" data-bi="" key={field}>
               {(["En", "Fa"] as const).map((lang) => {
                 const key = `support${field}${lang}` as SupportKey;
                 const dir = lang === "Fa" ? "rtl" : "ltr";

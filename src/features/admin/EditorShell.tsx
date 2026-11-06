@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useId, useRef, type FormEvent, ty
 import { useTranslations } from "next-intl";
 import { CloseIcon } from "./media-lib";
 import { useConfirm } from "./ux";
+import { LangSwitch, useEditLang } from "./LangSwitch";
 
 /** A collection panel provides this so any open editor can report unsaved edits upward. */
 export const EditorDirtyContext = createContext<(dirty: boolean) => void>(() => {});
@@ -17,6 +18,8 @@ interface Props {
   onCancel: () => void;
   onSubmit: () => void;
   footStart?: ReactNode;
+  /** Shows an English / Persian switch; the form's `.adm-pair[data-bi]` groups follow it. */
+  bilingual?: boolean;
   children: ReactNode;
 }
 
@@ -24,7 +27,9 @@ interface Props {
  * The editor frame, shown as a modal dialog. Close is always the X at the top end; Cancel and the
  * filled Save are always at the bottom end. Closing with edits asks first and says what is lost.
  */
-export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel, onSubmit, footStart, children }: Props) {
+export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel, onSubmit, footStart, bilingual, children }: Props) {
+  const [lang, setLang] = useEditLang();
+  const form = useRef<HTMLFormElement>(null);
   const t = useTranslations("admin");
   const headingId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
@@ -62,7 +67,18 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!saving) onSubmit();
+    if (saving) return;
+    onSubmit();
+    // A problem in the language that is not showing would be invisible: switch to it.
+    if (bilingual) {
+      requestAnimationFrame(() => {
+        const bad = form.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+        if (bad && bad.offsetParent === null) {
+          setLang(lang === "en" ? "fa" : "en");
+          requestAnimationFrame(() => form.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+        }
+      });
+    }
   };
 
   return (
@@ -93,6 +109,7 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
           </button>
         </div>
         <form
+          ref={form}
           className="adm-form"
           onSubmit={submit}
           noValidate
@@ -103,7 +120,10 @@ export function EditorShell({ title, submitLabel, saving, error, dirty, onCancel
             }
           }}
         >
-          <div className="adm-form-body">{children}</div>
+          <div className="adm-form-body" data-lang={bilingual ? lang : undefined}>
+            {bilingual && <LangSwitch value={lang} onChange={setLang} />}
+            {children}
+          </div>
           <div className="adm-form-foot">
             {footStart}
             {dirty && !saving && (

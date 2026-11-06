@@ -11,6 +11,7 @@ import type { Notify } from "./parts";
 import { useAdminActions } from "./actions-seam";
 import { Icon } from "./icons-ux";
 import { SaveBar } from "./ux";
+import { LangSwitch, useEditLang } from "./LangSwitch";
 
 const NS_ORDER = ["home", "about", "contact", "support", "series", "footer", "nav", "archive", "category", "project", "login", "errors", "common"];
 /** Where each namespace is visible on the public site. */
@@ -82,6 +83,7 @@ export function ContentEditor({
   const router = useRouter();
   const [, startRefresh] = useTransition();
   const searchId = useId();
+  const [lang, setLang] = useEditLang();
 
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [overlay, setOverlay] = useState<Overlay>({});
@@ -392,6 +394,7 @@ export function ContentEditor({
       title={t("content.title")}
       sub={t("content.sub")}
       viewPath={!searching && activeNs ? null : "/"}
+      editLang={lang}
     >
       <div className="ux-pages" role="group" aria-label={t("content.namespaces")}>
         {namespaces.map((n) => {
@@ -465,6 +468,8 @@ export function ContentEditor({
           </div>
         </div>
       )}
+
+      <LangSwitch value={lang} onChange={setLang} />
 
       <div className="adm-cmeta" role="status" aria-live="polite">
         <span>{searching ? t("content.results", { count: visible.length }) : t("content.inNamespace", { count: visible.length })}</span>
@@ -645,7 +650,7 @@ const ContentRow = memo(function ContentRow(p: RowProps) {
           </span>
         )}
       </p>
-      <div className="adm-pair adm-cpair">
+      <div className="adm-pair adm-cpair" data-bi="">
         {lane("en")}
         {lane("fa")}
       </div>

@@ -85,6 +85,7 @@ export function HeroEditor({
 
   return (
     <EditorShell
+      bilingual
       title={row ? t("hero.editTitle") : t("hero.newTitle")}
       submitLabel={row ? t("update") : t("hero.create")}
       saving={saving}
@@ -122,7 +123,7 @@ export function HeroEditor({
 
       <div className="adm-group">
         <p className="adm-group-title">{t("hero.textOptional")}</p>
-        <div className="adm-pair">
+        <div className="adm-pair" data-bi="">
           {(
             [
               ["titleEn", t("titleEn"), "ltr"],

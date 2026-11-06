@@ -70,6 +70,7 @@ export function PanelFrame({
   sub,
   actions,
   viewPath,
+  editLang,
   children,
 }: {
   id: string;
@@ -79,10 +80,12 @@ export function PanelFrame({
   sub?: string;
   actions?: ReactNode;
   viewPath?: string | null;
+  /** Which language `.adm-pair[data-bi]` groups show. */
+  editLang?: "en" | "fa";
   children: ReactNode;
 }) {
   return (
-    <section className="adm-panel" id={`adm-panel-${id}`} aria-labelledby={labelledBy} hidden={hidden} tabIndex={-1}>
+    <section className="adm-panel" id={`adm-panel-${id}`} aria-labelledby={labelledBy} hidden={hidden} tabIndex={-1} data-lang={editLang}>
       <PanelHead id={id} title={title} sub={sub} actions={actions} viewPath={viewPath} />
       {children}
     </section>

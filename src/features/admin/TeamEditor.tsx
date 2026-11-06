@@ -171,6 +171,7 @@ function TeamForm({
 
   return (
     <EditorShell
+      bilingual
       title={row ? t("team.editTitle") : t("team.newTitle")}
       submitLabel={row ? t("update") : t("team.create")}
       saving={saving}
@@ -191,7 +192,7 @@ function TeamForm({
         onFocusChange={setFocus}
         hints={{ recommended: { width: 900, height: 1200, ratio: "3:4" }, minWidth: 600 }}
       />
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <TextField label={t("team.nameEn")} required dir="ltr" value={f.nameEn} onChange={set("nameEn")} error={errors.nameEn} />
         <TextField label={t("team.nameFa")} required dir="rtl" value={f.nameFa} onChange={set("nameFa")} error={errors.nameFa} />
         <TextField label={t("team.titleEn")} dir="ltr" value={f.titleEn} onChange={set("titleEn")} />

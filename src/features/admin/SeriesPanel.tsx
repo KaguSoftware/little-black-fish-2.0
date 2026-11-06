@@ -223,6 +223,7 @@ function ChapterForm({ row, onClose, onSaved }: { row: SeriesChapterRow; onClose
 
   return (
     <EditorShell
+      bilingual
       title={t("series.editChapter", { slug: row.slug })}
       submitLabel={t("update")}
       saving={saving}
@@ -231,7 +232,7 @@ function ChapterForm({ row, onClose, onSaved }: { row: SeriesChapterRow; onClose
       onCancel={onClose}
       onSubmit={submit}
     >
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <TextField label={t("series.wordEn")} required dir="ltr" hint={t("series.wordHint")} value={f.wordEn} onChange={set("wordEn")} error={errors.wordEn} />
         <TextField label={t("series.wordFa")} required dir="rtl" value={f.wordFa} onChange={set("wordFa")} error={errors.wordFa} />
         <TextField label={t("titleEn")} required dir="ltr" value={f.titleEn} onChange={set("titleEn")} error={errors.titleEn} />
@@ -334,6 +335,7 @@ function CharacterForm({
 
   return (
     <EditorShell
+      bilingual
       title={t("series.editCharacter", { name: pick(row, "name", locale === "fa" ? "fa" : "en") || row.slug })}
       submitLabel={t("update")}
       saving={saving}
@@ -342,7 +344,7 @@ function CharacterForm({
       onCancel={onClose}
       onSubmit={submit}
     >
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <TextField label={t("series.nameEn")} required dir="ltr" value={f.nameEn} onChange={set("nameEn")} error={errors.nameEn} />
         <TextField label={t("series.nameFa")} required dir="rtl" value={f.nameFa} onChange={set("nameFa")} error={errors.nameFa} />
         <TextField label={t("series.roleEn")} dir="ltr" value={f.roleEn} onChange={set("roleEn")} />
@@ -368,7 +370,7 @@ function CharacterForm({
         <p className="adm-group-title">{t("series.narration")}</p>
         <p className="adm-hint-line">{t("series.narrationHint")}</p>
         {lineKeys.map((k) => (
-          <div className="adm-pair" key={k}>
+          <div className="adm-pair" data-bi="" key={k}>
             <TextField
               label={t("series.line", { chapter: t(`series.lineNames.${k}`), lang: t("langEn") })}
               dir="ltr"

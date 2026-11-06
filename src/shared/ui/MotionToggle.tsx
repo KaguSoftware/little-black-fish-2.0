@@ -12,7 +12,8 @@ text-shadow:0 0 14px oklch(0.08 0.01 215/.9);transition:color .12s linear}
 .lbf-motion:hover,.lbf-motion:focus-visible{color:var(--ink)}
 .lbf-motion:active{transform:scale(.97)}
 .lbf-motion[data-side=end]{inset-inline-start:auto;inset-inline-end:var(--gutter);margin-inline-start:0;margin-inline-end:-.5rem}
-@media (max-width:40rem){.lbf-motion{top:calc(env(safe-area-inset-top) + 3.4rem);bottom:auto}.lbf-motion[data-side=end]{top:max(.75rem,env(safe-area-inset-top))}.lbf-motion{font-size:.75rem}}
+/* On phones the toggle lives in the nav menu (Nav.tsx). */
+@media (max-width:40rem){.lbf-motion{display:none}}
 `;
 
 export function MotionToggle() {

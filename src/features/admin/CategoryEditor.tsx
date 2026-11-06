@@ -47,6 +47,7 @@ export function CategoryEditor({
 
   return (
     <EditorShell
+      bilingual
       title={row ? t("categories.editTitle") : t("categories.newTitle")}
       submitLabel={row ? t("update") : t("categories.create")}
       saving={saving}
@@ -55,7 +56,7 @@ export function CategoryEditor({
       onCancel={onClose}
       onSubmit={submit}
     >
-      <div className="adm-pair">
+      <div className="adm-pair" data-bi="">
         <Field label={t("categories.nameEn")} required error={errors.nameEn}>
           {({ id, describedBy, invalid }) => (
             <input

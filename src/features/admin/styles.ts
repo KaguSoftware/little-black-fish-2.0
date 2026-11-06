@@ -118,6 +118,9 @@ html:has(dialog.adm-modal[open]){overflow:hidden;scrollbar-gutter:stable}
 @keyframes adm-modal-in{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
 .adm-pair{display:grid;gap:1.6rem var(--gutter)}
 @media (min-width:40rem){.adm-pair{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.adm-pair[data-bi]{grid-template-columns:minmax(0,1fr)}
+[data-lang="en"] .adm-pair[data-bi]>:nth-child(even),[data-lang="fa"] .adm-pair[data-bi]>:nth-child(odd){display:none}
+.adm-langswitch{justify-self:start}
 .adm-group{display:grid;gap:1.4rem;padding-top:1.5rem;border-top:1px solid var(--hairline)}
 .adm-group-title{margin:0;font-family:var(--font-sans);font-weight:600;font-size:var(--step--1);color:var(--ink-dim)}
 .adm-group[hidden]{display:none}

@@ -52,6 +52,7 @@
   "youtubeUrl": "YouTube link",
   "langEn": "English",
   "langFa": "Persian",
+  "editingLang": "Editing language",
   "err": {
     "required": "Fill this in.",
     "youtube": "This doesn’t look like a YouTube link.",
